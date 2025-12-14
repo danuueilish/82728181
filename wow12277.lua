@@ -83,3 +83,64 @@ function _G.DisableWalkOnWater()
         _G.WaterPlatform = nil
     end
 end
+
+_G.ShiftlockEnabled = false
+_G.ShiftlockConnection = nil
+_G.ShiftlockGui = nil
+
+function _G.EnableShiftlock()
+    if _G.ShiftlockEnabled then return end
+    _G.ShiftlockEnabled = true
+
+    if not _G.ShiftlockGui then
+        local gui = Instance.new("ScreenGui")
+        gui.Name = "Shiftlock (CoreGui)"
+        gui.Parent = game.CoreGui
+        gui.ResetOnSpawn = false
+
+        local cursor = Instance.new("ImageLabel")
+        cursor.Image = "rbxasset://textures/MouseLockedCursor.png"
+        cursor.Size = UDim2.new(0.03,0,0.03,0)
+        cursor.Position = UDim2.fromScale(0.5,0.5)
+        cursor.AnchorPoint = Vector2.new(0.5,0.5)
+        cursor.BackgroundTransparency = 1
+        cursor.Visible = false
+        cursor.Parent = gui
+
+        _G.ShiftlockGui = {Gui = gui, Cursor = cursor}
+    end
+
+    _G.ShiftlockConnection = RunService.RenderStepped:Connect(function()
+        local char = LP.Character
+        local hum = char and char:FindFirstChildOfClass("Humanoid")
+        local hrp = char and char:FindFirstChild("HumanoidRootPart")
+        if not hum or not hrp then return end
+
+        hum.AutoRotate = false
+        _G.ShiftlockGui.Cursor.Visible = true
+
+        local cam = workspace.CurrentCamera
+        local look = cam.CFrame.LookVector
+        hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + Vector3.new(look.X,0,look.Z))
+        UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+    end)
+end
+
+function _G.DisableShiftlock()
+    _G.ShiftlockEnabled = false
+
+    if _G.ShiftlockConnection then
+        _G.ShiftlockConnection:Disconnect()
+        _G.ShiftlockConnection = nil
+    end
+
+    if _G.ShiftlockGui then
+        _G.ShiftlockGui.Cursor.Visible = false
+    end
+
+    UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+
+    local char = LP.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    if hum then hum.AutoRotate = true end
+end
