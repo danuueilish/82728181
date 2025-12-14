@@ -231,72 +231,29 @@ if not _G.__STREAMER_MODE_LOADED then
     local originalBillboard
     local clonedBillboard
 
-    -- cache buat restore leaderboard/ui text
-    local maskedCache = setmetatable({}, { __mode = "k" })
-    local maskConn = nil
+    local function applyBillboardTextSmart(bb)
+        task.wait()
 
-    local function getTokens()
-        local tokens = {}
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p.Name and p.Name ~= "" then
-                table.insert(tokens, p.Name)
-                table.insert(tokens, "@" .. p.Name)
-            end
-            if p.DisplayName and p.DisplayName ~= "" then
-                table.insert(tokens, p.DisplayName)
+        local labels = {}
+        for _, d in ipairs(bb:GetDescendants()) do
+            if d:IsA("TextLabel") then
+                labels[#labels + 1] = d
             end
         end
-        return tokens
-    end
+        if #labels == 0 then return end
 
-    local function maskRoot(root)
-        if not root then return end
-        local tokens = getTokens()
-
-        for _, obj in ipairs(root:GetDescendants()) do
-            if obj:IsA("TextLabel") or obj:IsA("TextButton") then
-                local t = obj.Text
-                if t and t ~= "" then
-                    local newT = t
-                    for _, token in ipairs(tokens) do
-                        if token ~= "" and newT:find(token, 1, true) then
-                            newT = newT:gsub(token, "discord.gg/Alohomora")
-                        end
-                    end
-
-                    if newT ~= t then
-                        if maskedCache[obj] == nil then
-                            maskedCache[obj] = t
-                        end
-                        obj.Text = newT
-                    end
-                end
-            end
-        end
-    end
-
-    local function startMasking()
-        if maskConn then maskConn:Disconnect() end
-        maskConn = RunService.RenderStepped:Connect(function()
-            if not streamerModeEnabled then return end
-            -- Core leaderboard / core UI
-            maskRoot(CoreGui)
-            -- UI game (Search Player kamu biasanya di PlayerGui)
-            local pg = LP:FindFirstChildOfClass("PlayerGui")
-            if pg then maskRoot(pg) end
+        table.sort(labels, function(a, b)
+            local aArea = a.AbsoluteSize.X * a.AbsoluteSize.Y
+            local bArea = b.AbsoluteSize.X * b.AbsoluteSize.Y
+            return aArea > bArea
         end)
-    end
 
-    local function stopMasking()
-        if maskConn then
-            maskConn:Disconnect()
-            maskConn = nil
-        end
-        for obj, oldText in pairs(maskedCache) do
-            if obj and obj.Parent then
-                obj.Text = oldText
+        for i, lbl in ipairs(labels) do
+            if i == 1 then
+                lbl.Text = "discord.gg/Alohomora"
+            else
+                lbl.Text = "by danuu eilish."
             end
-            maskedCache[obj] = nil
         end
     end
 
@@ -326,30 +283,7 @@ if not _G.__STREAMER_MODE_LOADED then
         clonedBillboard.Parent = head
         clonedBillboard.Enabled = true
 
-        -- biar AbsoluteSize kebaca bener
-        task.wait()
-
-        -- FIX 1: pilih label "gede" pakai ukuran UI, bukan TextSize
-        local labels = {}
-        for _, d in ipairs(clonedBillboard:GetDescendants()) do
-            if d:IsA("TextLabel") then
-                table.insert(labels, d)
-            end
-        end
-
-        table.sort(labels, function(a, b)
-            local aArea = a.AbsoluteSize.X * a.AbsoluteSize.Y
-            local bArea = b.AbsoluteSize.X * b.AbsoluteSize.Y
-            return aArea > bArea
-        end)
-
-        for i, lbl in ipairs(labels) do
-            if i == 1 then
-                lbl.Text = "discord.gg/Alohomora"
-            else
-                lbl.Text = "by danuu eilish."
-            end
-        end
+        applyBillboardTextSmart(clonedBillboard)
     end
 
     local function restoreOwnBillboard()
@@ -397,11 +331,126 @@ if not _G.__STREAMER_MODE_LOADED then
         end
     end
 
+    local maskedCache = setmetatable({}, { __mode = "k" })  -- obj -> oldText
+    local trackedText = setmetatable({}, { __mode = "k" })  -- obj -> true
+    local tokenSet = {}
+
+    local coreAddedConn, pgAddedConn
+    local refreshConn
+    local playerAddConn, playerRemoveConn
+
+    local function rebuildTokenSet()
+        tokenSet = {}
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Name and p.Name ~= "" then
+                tokenSet[p.Name] = true
+                tokenSet["@" .. p.Name] = true
+            end
+            if p.DisplayName and p.DisplayName ~= "" then
+                tokenSet[p.DisplayName] = true
+            end
+        end
+    end
+
+    local function tryMaskObject(obj)
+        if not streamerModeEnabled then return end
+        if not (obj:IsA("TextLabel") or obj:IsA("TextButton")) then return end
+
+        local t = obj.Text
+        if not t or t == "" then return end
+        if t == "discord.gg/Alohomora" then return end
+
+        if tokenSet[t] then
+            if maskedCache[obj] == nil then
+                maskedCache[obj] = t
+            end
+            obj.Text = "discord.gg/Alohomora"
+        end
+    end
+
+    local function trackAndMask(root)
+        if not root then return end
+        for _, obj in ipairs(root:GetDescendants()) do
+            if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+                trackedText[obj] = true
+                tryMaskObject(obj)
+            end
+        end
+    end
+
+    local function startMasking()
+        rebuildTokenSet()
+
+        local pg = LP:FindFirstChildOfClass("PlayerGui")
+
+        trackAndMask(CoreGui)
+        if pg then trackAndMask(pg) end
+
+        if coreAddedConn then coreAddedConn:Disconnect() end
+        coreAddedConn = CoreGui.DescendantAdded:Connect(function(obj)
+            if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+                trackedText[obj] = true
+                tryMaskObject(obj)
+            end
+        end)
+
+        if pgAddedConn then pgAddedConn:Disconnect() end
+        if pg then
+            pgAddedConn = pg.DescendantAdded:Connect(function(obj)
+                if obj:IsA("TextLabel") or obj:IsA("TextButton") then
+                    trackedText[obj] = true
+                    tryMaskObject(obj)
+                end
+            end)
+        end
+
+        if playerAddConn then playerAddConn:Disconnect() end
+        if playerRemoveConn then playerRemoveConn:Disconnect() end
+        playerAddConn = Players.PlayerAdded:Connect(rebuildTokenSet)
+        playerRemoveConn = Players.PlayerRemoving:Connect(rebuildTokenSet)
+
+        if refreshConn then refreshConn:Disconnect() end
+        local acc = 0
+        refreshConn = RunService.Heartbeat:Connect(function(dt)
+            if not streamerModeEnabled then return end
+            acc += dt
+            if acc < 0.35 then return end
+            acc = 0
+
+            for obj in pairs(trackedText) do
+                if obj and obj.Parent then
+                    tryMaskObject(obj)
+                else
+                    trackedText[obj] = nil
+                    maskedCache[obj] = nil
+                end
+            end
+        end)
+    end
+
+    local function stopMasking()
+        if coreAddedConn then coreAddedConn:Disconnect() coreAddedConn = nil end
+        if pgAddedConn then pgAddedConn:Disconnect() pgAddedConn = nil end
+        if refreshConn then refreshConn:Disconnect() refreshConn = nil end
+        if playerAddConn then playerAddConn:Disconnect() playerAddConn = nil end
+        if playerRemoveConn then playerRemoveConn:Disconnect() playerRemoveConn = nil end
+
+        for obj, oldText in pairs(maskedCache) do
+            if obj and obj.Parent then
+                obj.Text = oldText
+            end
+            maskedCache[obj] = nil
+        end
+
+        for obj in pairs(trackedText) do
+            trackedText[obj] = nil
+        end
+    end
+
     function _G.EnableStreamerMode()
         streamerModeEnabled = true
         cloneOwnBillboard()
         hideOtherBillboards()
-        -- FIX 2: mulai mask leaderboard/search player
         startMasking()
     end
 
