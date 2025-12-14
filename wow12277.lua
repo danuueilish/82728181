@@ -84,63 +84,69 @@ function _G.DisableWalkOnWater()
     end
 end
 
-_G.ShiftlockEnabled = false
-_G.ShiftlockConnection = nil
-_G.ShiftlockGui = nil
+do
+    local gui, button, cursor, active
 
-function _G.EnableShiftlock()
-    if _G.ShiftlockEnabled then return end
-    _G.ShiftlockEnabled = true
+    function _G.EnableShiftlock()
+        if gui then gui.Enabled = true return end
 
-    if not _G.ShiftlockGui then
-        local gui = Instance.new("ScreenGui")
+        gui = Instance.new("ScreenGui")
         gui.Name = "Shiftlock (CoreGui)"
         gui.Parent = game.CoreGui
         gui.ResetOnSpawn = false
 
-        local cursor = Instance.new("ImageLabel")
+        button = Instance.new("ImageButton", gui)
+        button.Size = UDim2.new(0.063,0,0.066,0)
+        button.Position = UDim2.new(0.7,0,0.75,0)
+        button.BackgroundTransparency = 1
+        button.Image = "rbxasset://textures/ui/mouseLock_off@2x.png"
+
+        cursor = Instance.new("ImageLabel", gui)
         cursor.Image = "rbxasset://textures/MouseLockedCursor.png"
         cursor.Size = UDim2.new(0.03,0,0.03,0)
-        cursor.Position = UDim2.fromScale(0.5,0.5)
+        cursor.Position = UDim2.new(0.5,0,0.5,0)
         cursor.AnchorPoint = Vector2.new(0.5,0.5)
         cursor.BackgroundTransparency = 1
         cursor.Visible = false
-        cursor.Parent = gui
 
-        _G.ShiftlockGui = {Gui = gui, Cursor = cursor}
+        local function disable()
+            if active then active:Disconnect() active = nil end
+            cursor.Visible = false
+            button.Image = "rbxasset://textures/ui/mouseLock_off@2x.png"
+            UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+            if LP.Character then
+                local hum = LP.Character:FindFirstChildOfClass("Humanoid")
+                if hum then hum.AutoRotate = true end
+            end
+        end
+
+        button.MouseButton1Click:Connect(function()
+            if active then
+                disable()
+            else
+                active = RunService.RenderStepped:Connect(function()
+                    local char = LP.Character
+                    local hum = char and char:FindFirstChildOfClass("Humanoid")
+                    local hrp = char and char:FindFirstChild("HumanoidRootPart")
+                    if not hum or not hrp then return end
+
+                    hum.AutoRotate = false
+                    cursor.Visible = true
+                    button.Image = "rbxasset://textures/ui/mouseLock_on@2x.png"
+                    UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
+
+                    local cam = workspace.CurrentCamera
+                    local look = cam.CFrame.LookVector
+                    hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + Vector3.new(look.X,0,look.Z))
+                end)
+            end
+        end)
+
+        LP.CharacterAdded:Connect(disable)
     end
 
-    _G.ShiftlockConnection = RunService.RenderStepped:Connect(function()
-        local char = LP.Character
-        local hum = char and char:FindFirstChildOfClass("Humanoid")
-        local hrp = char and char:FindFirstChild("HumanoidRootPart")
-        if not hum or not hrp then return end
-
-        hum.AutoRotate = false
-        _G.ShiftlockGui.Cursor.Visible = true
-
-        local cam = workspace.CurrentCamera
-        local look = cam.CFrame.LookVector
-        hrp.CFrame = CFrame.new(hrp.Position, hrp.Position + Vector3.new(look.X,0,look.Z))
-        UserInputService.MouseBehavior = Enum.MouseBehavior.LockCenter
-    end)
-end
-
-function _G.DisableShiftlock()
-    _G.ShiftlockEnabled = false
-
-    if _G.ShiftlockConnection then
-        _G.ShiftlockConnection:Disconnect()
-        _G.ShiftlockConnection = nil
+    function _G.DisableShiftlock()
+        if gui then gui.Enabled = false end
+        UserInputService.MouseBehavior = Enum.MouseBehavior.Default
     end
-
-    if _G.ShiftlockGui then
-        _G.ShiftlockGui.Cursor.Visible = false
-    end
-
-    UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-
-    local char = LP.Character
-    local hum = char and char:FindFirstChildOfClass("Humanoid")
-    if hum then hum.AutoRotate = true end
 end
