@@ -364,7 +364,7 @@ if not _G.__STREAMER_MODE_LOADED then
             if maskedCache[obj] == nil then
                 maskedCache[obj] = t
             end
-            obj.Text = "discord.gg/alohomora"
+            obj.Text = "by danuu eilish."
         end
     end
 
