@@ -250,9 +250,9 @@ if not _G.__STREAMER_MODE_LOADED then
 
         for i, lbl in ipairs(labels) do
             if i == 1 then
-                lbl.Text = "discord.gg/Alohomora"
-            else
                 lbl.Text = "by danuu eilish."
+            else
+                lbl.Text = "discord.gg/alohomora"
             end
         end
     end
@@ -324,15 +324,15 @@ if not _G.__STREAMER_MODE_LOADED then
 
     TextChatService.OnIncomingMessage = function(msg)
         if streamerModeEnabled then
-            msg.PrefixText = "discord.gg/Alohomora"
+            msg.PrefixText = "discord.gg/alohomora"
             msg.Text = msg.Text
-                :gsub(LP.Name, "discord.gg/Alohomora")
-                :gsub(LP.DisplayName, "discord.gg/Alohomora")
+                :gsub(LP.Name, "by danuu eilish.")
+                :gsub(LP.DisplayName, "discord.gg/alohomora")
         end
     end
 
-    local maskedCache = setmetatable({}, { __mode = "k" })  -- obj -> oldText
-    local trackedText = setmetatable({}, { __mode = "k" })  -- obj -> true
+    local maskedCache = setmetatable({}, { __mode = "k" })
+    local trackedText = setmetatable({}, { __mode = "k" })
     local tokenSet = {}
 
     local coreAddedConn, pgAddedConn
@@ -358,13 +358,13 @@ if not _G.__STREAMER_MODE_LOADED then
 
         local t = obj.Text
         if not t or t == "" then return end
-        if t == "discord.gg/Alohomora" then return end
+        if t == "by danuu eilish." then return end
 
         if tokenSet[t] then
             if maskedCache[obj] == nil then
                 maskedCache[obj] = t
             end
-            obj.Text = "discord.gg/Alohomora"
+            obj.Text = "discord.gg/alohomora"
         end
     end
 
