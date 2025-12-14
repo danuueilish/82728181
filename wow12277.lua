@@ -324,7 +324,7 @@ if not _G.__STREAMER_MODE_LOADED then
 
     TextChatService.OnIncomingMessage = function(msg)
         if streamerModeEnabled then
-            msg.PrefixText = "discord.gg/alohomora"
+            msg.PrefixText = "by danuu eilish."
             msg.Text = msg.Text
                 :gsub(LP.Name, "by danuu eilish.")
                 :gsub(LP.DisplayName, "discord.gg/alohomora")
