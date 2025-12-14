@@ -218,130 +218,102 @@ if not _G.__SHIFTLOCK_LOADED then
     end
 end
 
-if _G.__STREAMER_MODE_LOADED then return end
-_G.__STREAMER_MODE_LOADED = true
+if not _G.__STREAMER_MODE_LOADED then
+    _G.__STREAMER_MODE_LOADED = true
 
-local Players = game:GetService("Players")
-local TextChatService = game:GetService("TextChatService")
+    local Players = game:GetService("Players")
+    local TextChatService = game:GetService("TextChatService")
+    local LP = Players.LocalPlayer
 
-local LP = Players.LocalPlayer
+    local streamerModeEnabled = false
+    local originalBillboard
+    local clonedBillboard
 
-_G.StreamerModeEnabled = false
+    local function cloneOwnBillboard()
+        if not LP.Character then return end
+        local head = LP.Character:FindFirstChild("Head")
+        if not head then return end
 
-local originalBillboard
-local clonedBillboard
-local streamerConn
-
-local function cloneBillboard()
-    if not LP.Character then return end
-    local head = LP.Character:FindFirstChild("Head")
-    if not head then return end
-
-    for _, b in ipairs(head:GetChildren()) do
-        if b:IsA("BillboardGui") and not b.Name:find("Custom") then
-            originalBillboard = b
-            break
+        for _, b in ipairs(head:GetChildren()) do
+            if b:IsA("BillboardGui") and not b.Name:find("Custom") then
+                originalBillboard = b
+                break
+            end
         end
-    end
-    if not originalBillboard then return end
 
-    originalBillboard.Enabled = false
-    clonedBillboard = originalBillboard:Clone()
-    clonedBillboard.Name = "CustomStreamerBillboard"
-    clonedBillboard.Parent = head
-    clonedBillboard.Enabled = true
+        if not originalBillboard then return end
 
-    for _, d in ipairs(clonedBillboard:GetDescendants()) do
-        if d:IsA("TextLabel") then
-            if d.TextSize >= 14 or d.Size.Y.Scale > 0.5 then
-                d.Text = "discord.gg/Alohomora"
-            else
-                d.Text = "by danuu eilish."
+        originalBillboard.Enabled = false
+        clonedBillboard = originalBillboard:Clone()
+        clonedBillboard.Name = "CustomStreamerBillboard"
+        clonedBillboard.Parent = head
+        clonedBillboard.Enabled = true
+
+        for _, d in ipairs(clonedBillboard:GetDescendants()) do
+            if d:IsA("TextLabel") then
+                if d.TextSize >= 14 then
+                    d.Text = "discord.gg/Alohomora"
+                else
+                    d.Text = "by danuu eilish."
+                end
             end
         end
     end
-end
 
-local function restoreBillboard()
-    if originalBillboard then
-        originalBillboard.Enabled = true
-    end
-    if clonedBillboard then
-        clonedBillboard:Destroy()
+    local function restoreOwnBillboard()
+        if originalBillboard then originalBillboard.Enabled = true end
+        if clonedBillboard then clonedBillboard:Destroy() end
         clonedBillboard = nil
     end
-end
 
-local function hideNames()
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p.Character then
-            local head = p.Character:FindFirstChild("Head")
-            if head then
-                for _, b in ipairs(head:GetChildren()) do
-                    if b:IsA("BillboardGui") then
-                        b.Enabled = false
+    local function hideOtherBillboards()
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LP and p.Character then
+                local h = p.Character:FindFirstChild("Head")
+                if h then
+                    for _, b in ipairs(h:GetChildren()) do
+                        if b:IsA("BillboardGui") then
+                            b.Enabled = false
+                        end
                     end
                 end
             end
         end
     end
-end
 
-local function restoreNames()
-    for _, p in ipairs(Players:GetPlayers()) do
-        if p.Character then
-            local head = p.Character:FindFirstChild("Head")
-            if head then
-                for _, b in ipairs(head:GetChildren()) do
-                    if b:IsA("BillboardGui") then
-                        b.Enabled = true
+    local function restoreOtherBillboards()
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p ~= LP and p.Character then
+                local h = p.Character:FindFirstChild("Head")
+                if h then
+                    for _, b in ipairs(h:GetChildren()) do
+                        if b:IsA("BillboardGui") then
+                            b.Enabled = true
+                        end
                     end
                 end
             end
         end
     end
-end
-
-if not _G.__STREAMER_CHAT_HOOKED then
-    _G.__STREAMER_CHAT_HOOKED = true
 
     TextChatService.OnIncomingMessage = function(msg)
-        if _G.StreamerModeEnabled then
+        if streamerModeEnabled then
             msg.PrefixText = "discord.gg/Alohomora"
             msg.Text = msg.Text
                 :gsub(LP.Name, "discord.gg/Alohomora")
                 :gsub(LP.DisplayName, "discord.gg/Alohomora")
         end
     end
-end
 
-local function loopMask()
-    task.spawn(function()
-        while _G.StreamerModeEnabled do
-            pcall(hideNames)
-            task.wait(0.5)
-        end
-    end)
-end
-
-_G.EnableStreamerMode = function()
-    if _G.StreamerModeEnabled then return end
-    _G.StreamerModeEnabled = true
-    cloneBillboard()
-    hideNames()
-    loopMask()
-end
-
-_G.DisableStreamerMode = function()
-    _G.StreamerModeEnabled = false
-    restoreBillboard()
-    restoreNames()
-end
-
-LP.CharacterAdded:Connect(function()
-    if _G.StreamerModeEnabled then
-        task.wait(1)
-        restoreBillboard()
-        cloneBillboard()
+    function _G.EnableStreamerMode()
+        streamerModeEnabled = true
+        cloneOwnBillboard()
+        hideOtherBillboards()
     end
-end)
+
+    function _G.DisableStreamerMode()
+        streamerModeEnabled = false
+        restoreOwnBillboard()
+        restoreOtherBillboards()
+    end
+end
