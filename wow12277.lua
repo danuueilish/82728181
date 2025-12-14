@@ -218,8 +218,8 @@ if not _G.__SHIFTLOCK_LOADED then
     end
 end
 
-if not _G.__STREAMER_MODE_LOADED then
-    _G.__STREAMER_MODE_LOADED = true
+if not _G.__STREAMER_MODE_LOADED_V2 then
+    _G.__STREAMER_MODE_LOADED_V2 = true
 
     local Players = game:GetService("Players")
     local TextChatService = game:GetService("TextChatService")
@@ -231,42 +231,32 @@ if not _G.__STREAMER_MODE_LOADED then
     local streamerModeEnabled = false
     local originalBillboard
     local clonedBillboard
-
-    local prevOnIncomingMessage = TextChatService.OnIncomingMessage
     local maskConn
 
-    local function buildNameSet()
-        local set = {}
-        for _, p in ipairs(Players:GetPlayers()) do
-            if p.Name then set[p.Name] = true end
-            if p.DisplayName then set[p.DisplayName] = true end
+    -- beberapa executor lebih cocok scan HUI
+    local function getUIRoot()
+        if typeof(gethui) == "function" then
+            local ok, hui = pcall(gethui)
+            if ok and hui then return hui end
         end
-        return set
+        return CoreGui
     end
 
     local function applyBillboardTextSmart(bb)
         local labels = {}
-
         for _, d in ipairs(bb:GetDescendants()) do
             if d:IsA("TextLabel") then
-                table.insert(labels, d)
+                labels[#labels+1] = d
             end
         end
-
         if #labels == 0 then return end
 
         table.sort(labels, function(a, b)
-            local aScore = (a.AbsoluteSize.Y * a.AbsoluteSize.X)
-            local bScore = (b.AbsoluteSize.Y * b.AbsoluteSize.X)
-            -- fallback kalau ada yang 0 size
-            if aScore == bScore then
-                aScore = a.TextBounds.X * a.TextBounds.Y
-                bScore = b.TextBounds.X * b.TextBounds.Y
-            end
-            return aScore > bScore
+            local aArea = a.AbsoluteSize.X * a.AbsoluteSize.Y
+            local bArea = b.AbsoluteSize.X * b.AbsoluteSize.Y
+            return aArea > bArea
         end)
 
-        -- label terbesar = utama
         labels[1].Text = "discord.gg/Alohomora"
         for i = 2, #labels do
             labels[i].Text = "by danuu eilish."
@@ -338,43 +328,56 @@ if not _G.__STREAMER_MODE_LOADED then
         end
     end
 
-    local function maskTextLabelsIn(root, nameSet)
+    local function buildTokens()
+        local tokens = {}
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Name then
+                tokens[#tokens+1] = p.Name
+                tokens[#tokens+1] = "@" .. p.Name
+            end
+            if p.DisplayName then
+                tokens[#tokens+1] = p.DisplayName
+            end
+        end
+        return tokens
+    end
+
+    local function maskGuiTexts(root)
         if not root then return end
+        local tokens = buildTokens()
+
         for _, obj in ipairs(root:GetDescendants()) do
-            if obj:IsA("TextLabel") then
+            if obj:IsA("TextLabel") or obj:IsA("TextButton") then
                 local t = obj.Text
-                if t and nameSet[t] then
-                    obj.Text = "discord.gg/Alohomora"
+                if t and t ~= "" then
+                    local newT = t
+                    for _, token in ipairs(tokens) do
+                        if token and token ~= "" and string.find(newT, token, 1, true) then
+                            newT = newT:gsub(token, "discord.gg/Alohomora")
+                        end
+                    end
+                    if newT ~= t then
+                        obj.Text = newT
+                    end
                 end
             end
         end
     end
 
-    local function maskLeaderboards()
-        local nameSet = buildNameSet()
-
-        -- Core PlayerList (leaderboard bawaan Roblox)
-        maskTextLabelsIn(CoreGui, nameSet)
-
-        -- Custom UI leaderboard (kalau game bikin sendiri di PlayerGui)
-        local pg = LP:FindFirstChildOfClass("PlayerGui")
-        if pg then
-            maskTextLabelsIn(pg, nameSet)
-        end
-    end
-
+    -- Chat hook yang “bener” untuk TextChatService modern
     TextChatService.OnIncomingMessage = function(msg)
-        if streamerModeEnabled then
-            msg.PrefixText = "discord.gg/Alohomora"
-            msg.Text = msg.Text
-                :gsub(LP.Name, "discord.gg/Alohomora")
-                :gsub(LP.DisplayName, "discord.gg/Alohomora")
-        end
+        if not streamerModeEnabled then return end
 
-        -- biar nggak nabrak handler lain (kalau ada)
-        if prevOnIncomingMessage then
-            return prevOnIncomingMessage(msg)
-        end
+        local props = Instance.new("TextChatMessageProperties")
+        props.PrefixText = "discord.gg/Alohomora"
+
+        local text = msg.Text or ""
+        text = text
+            :gsub(LP.Name, "discord.gg/Alohomora")
+            :gsub(LP.DisplayName, "discord.gg/Alohomora")
+
+        props.Text = text
+        return props
     end
 
     function _G.EnableStreamerMode()
@@ -384,9 +387,10 @@ if not _G.__STREAMER_MODE_LOADED then
 
         if maskConn then maskConn:Disconnect() end
         maskConn = RunService.RenderStepped:Connect(function()
-            if streamerModeEnabled then
-                maskLeaderboards()
-            end
+            if not streamerModeEnabled then return end
+            maskGuiTexts(getUIRoot())
+            local pg = LP:FindFirstChildOfClass("PlayerGui")
+            if pg then maskGuiTexts(pg) end
         end)
     end
 
