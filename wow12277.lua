@@ -223,41 +223,83 @@ if not _G.__STREAMER_MODE_LOADED then
 
     local Players = game:GetService("Players")
     local TextChatService = game:GetService("TextChatService")
+    local RunService = game:GetService("RunService")
+    local CoreGui = game:GetService("CoreGui")
+
     local LP = Players.LocalPlayer
 
     local streamerModeEnabled = false
     local originalBillboard
     local clonedBillboard
 
+    local prevOnIncomingMessage = TextChatService.OnIncomingMessage
+    local maskConn
+
+    local function buildNameSet()
+        local set = {}
+        for _, p in ipairs(Players:GetPlayers()) do
+            if p.Name then set[p.Name] = true end
+            if p.DisplayName then set[p.DisplayName] = true end
+        end
+        return set
+    end
+
+    local function applyBillboardTextSmart(bb)
+        local labels = {}
+
+        for _, d in ipairs(bb:GetDescendants()) do
+            if d:IsA("TextLabel") then
+                table.insert(labels, d)
+            end
+        end
+
+        if #labels == 0 then return end
+
+        table.sort(labels, function(a, b)
+            local aScore = (a.AbsoluteSize.Y * a.AbsoluteSize.X)
+            local bScore = (b.AbsoluteSize.Y * b.AbsoluteSize.X)
+            -- fallback kalau ada yang 0 size
+            if aScore == bScore then
+                aScore = a.TextBounds.X * a.TextBounds.Y
+                bScore = b.TextBounds.X * b.TextBounds.Y
+            end
+            return aScore > bScore
+        end)
+
+        -- label terbesar = utama
+        labels[1].Text = "discord.gg/Alohomora"
+        for i = 2, #labels do
+            labels[i].Text = "by danuu eilish."
+        end
+    end
+
     local function cloneOwnBillboard()
         if not LP.Character then return end
         local head = LP.Character:FindFirstChild("Head")
         if not head then return end
 
+        originalBillboard = nil
         for _, b in ipairs(head:GetChildren()) do
             if b:IsA("BillboardGui") and not b.Name:find("Custom") then
                 originalBillboard = b
                 break
             end
         end
-
         if not originalBillboard then return end
 
         originalBillboard.Enabled = false
+
+        if clonedBillboard then
+            clonedBillboard:Destroy()
+            clonedBillboard = nil
+        end
+
         clonedBillboard = originalBillboard:Clone()
         clonedBillboard.Name = "CustomStreamerBillboard"
         clonedBillboard.Parent = head
         clonedBillboard.Enabled = true
 
-        for _, d in ipairs(clonedBillboard:GetDescendants()) do
-            if d:IsA("TextLabel") then
-                if d.TextSize >= 14 then
-                    d.Text = "discord.gg/Alohomora"
-                else
-                    d.Text = "by danuu eilish."
-                end
-            end
-        end
+        applyBillboardTextSmart(clonedBillboard)
     end
 
     local function restoreOwnBillboard()
@@ -296,6 +338,31 @@ if not _G.__STREAMER_MODE_LOADED then
         end
     end
 
+    local function maskTextLabelsIn(root, nameSet)
+        if not root then return end
+        for _, obj in ipairs(root:GetDescendants()) do
+            if obj:IsA("TextLabel") then
+                local t = obj.Text
+                if t and nameSet[t] then
+                    obj.Text = "discord.gg/Alohomora"
+                end
+            end
+        end
+    end
+
+    local function maskLeaderboards()
+        local nameSet = buildNameSet()
+
+        -- Core PlayerList (leaderboard bawaan Roblox)
+        maskTextLabelsIn(CoreGui, nameSet)
+
+        -- Custom UI leaderboard (kalau game bikin sendiri di PlayerGui)
+        local pg = LP:FindFirstChildOfClass("PlayerGui")
+        if pg then
+            maskTextLabelsIn(pg, nameSet)
+        end
+    end
+
     TextChatService.OnIncomingMessage = function(msg)
         if streamerModeEnabled then
             msg.PrefixText = "discord.gg/Alohomora"
@@ -303,17 +370,34 @@ if not _G.__STREAMER_MODE_LOADED then
                 :gsub(LP.Name, "discord.gg/Alohomora")
                 :gsub(LP.DisplayName, "discord.gg/Alohomora")
         end
+
+        -- biar nggak nabrak handler lain (kalau ada)
+        if prevOnIncomingMessage then
+            return prevOnIncomingMessage(msg)
+        end
     end
 
     function _G.EnableStreamerMode()
         streamerModeEnabled = true
         cloneOwnBillboard()
         hideOtherBillboards()
+
+        if maskConn then maskConn:Disconnect() end
+        maskConn = RunService.RenderStepped:Connect(function()
+            if streamerModeEnabled then
+                maskLeaderboards()
+            end
+        end)
     end
 
     function _G.DisableStreamerMode()
         streamerModeEnabled = false
         restoreOwnBillboard()
         restoreOtherBillboards()
+
+        if maskConn then
+            maskConn:Disconnect()
+            maskConn = nil
+        end
     end
 end
