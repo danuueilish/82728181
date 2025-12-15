@@ -250,7 +250,7 @@ if not _G.__STREAMER_MODE_LOADED then
 
         for i, lbl in ipairs(labels) do
             if i == 1 then
-                lbl.Text = "by danuu eilish."
+                lbl.Text = "Powered by BluuHub"
             else
                 lbl.Text = "discord.gg/alohomora"
             end
@@ -326,7 +326,7 @@ if not _G.__STREAMER_MODE_LOADED then
         if streamerModeEnabled then
             msg.PrefixText = "discord.gg/alohomora"
             msg.Text = msg.Text
-                :gsub(LP.Name, "by danuu eilish.")
+                :gsub(LP.Name, "Powered by BluuHub")
                 :gsub(LP.DisplayName, "discord.gg/alohomora")
         end
     end
@@ -358,13 +358,13 @@ if not _G.__STREAMER_MODE_LOADED then
 
         local t = obj.Text
         if not t or t == "" then return end
-        if t == "by danuu eilish." then return end
+        if t == "Powered by BluuHub" then return end
 
         if tokenSet[t] then
             if maskedCache[obj] == nil then
                 maskedCache[obj] = t
             end
-            obj.Text = "by danuu eilish."
+            obj.Text = "Powered by BluuHub"
         end
     end
 
