@@ -21,6 +21,11 @@ local busy = false
 local selectedFish = nil
 local giveLeft = 0
 
+local function isFavoriteTool(tool)
+    if not tool or not tool.Name then return false end
+    return tool.Name:find("%(Favorite%)") ~= nil
+end
+
 local function equipFish()
     local char = LP.Character
     if not char then return nil end
@@ -28,7 +33,10 @@ local function equipFish()
     if not backpack then return nil end
 
     for _, tool in ipairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool.Name:lower():find(selectedFish) then
+        if tool:IsA("Tool")
+            and tool.Name:lower():find(selectedFish)
+            and not isFavoriteTool(tool) then
+
             tool.Parent = char
             return tool
         end
@@ -41,16 +49,13 @@ local function giveLoop()
             if busy then task.wait() continue end
             busy = true
 
-            
             fireproximityprompt(Prompt)
             task.wait(2)
 
-            
             WinterEvent:InvokeServer("CheckQuest")
             WinterEvent:InvokeServer("GetQuestInfo")
             task.wait(0.5)
 
-            
             local tool = equipFish()
             if not tool then
                 busy = false
@@ -59,7 +64,6 @@ local function giveLoop()
 
             task.wait(0.5)
 
-            
             WinterEvent:InvokeServer("EndQuest")
             task.wait(0.5)
 
