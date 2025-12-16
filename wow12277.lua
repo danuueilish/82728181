@@ -462,96 +462,79 @@ if not _G.__STREAMER_MODE_LOADED then
     end
 end
 
-if _G.AutoGiveSantaLoaded then return end
-_G.AutoGiveSantaLoaded = true
+_G.AutoGiveRunning = false
 
 local Players = game:GetService("Players")
-local LocalPlayer = Players.LocalPlayer
-local Backpack = LocalPlayer:WaitForChild("Backpack")
-local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LP = Players.LocalPlayer
 
-local Santa = workspace.WinterDeco.ChrismastEventBooth.Rig
-local Prompt = Santa:WaitForChild("Torso"):WaitForChild("ProximityPrompt")
+local WinterEvent = ReplicatedStorage.Events.RemoteFunction.WinterEvent
+local DialogModule = require(ReplicatedStorage.Module.DialogModule)
 
-local running = false
-local selectedFish
-local fishAmount
-local equippedTool
+local NPC = workspace.WinterDeco.ChrismastEventBooth.Rig
+local Prompt = NPC.Torso.ProximityPrompt
+local DialogGui = NPC.Part.gui
 
-local function waitSec(t)
-    local s = os.clock()
-    while os.clock() - s < t do
-        task.wait()
-    end
-end
+local dialog = DialogModule.new("Winter Event", DialogGui, Prompt)
+
+dialog:addDialog("Apa yang kamu ingin-kan?", {"Quest", "Check Token", "Bye"})
+dialog:addDialog("Apakah kamu ingin mendapatkan quest?", {"Yes", "Bye"})
+dialog:addDialog("...", {"Give", "Bye"})
 
 local function firePrompt()
-    fireproximityprompt(Prompt, 1)
+    fireproximityprompt(Prompt)
 end
 
-local function clickDialogButton(text)
-    for _, gui in ipairs(PlayerGui:GetDescendants()) do
-        if gui:IsA("TextButton") and gui.Visible then
-            if string.lower(gui.Text) == string.lower(text) then
-                gui:Activate()
-                gui.MouseButton1Click:Fire()
-                return true
-            end
-        end
-    end
-    return false
+local function waitDialog()
+    repeat task.wait() until DialogGui.Enabled == true
 end
 
-local function equipFish()
-    if equippedTool and equippedTool.Parent == LocalPlayer.Character then
+local function respond(choice)
+    dialog:respond(LP, choice)
+end
+
+local function equipFish(fishName)
+    local backpack = LP.Backpack
+    local tool = backpack:FindFirstChild(fishName)
+    if tool then
+        tool.Parent = LP.Character
         return true
     end
-
-    for _, tool in ipairs(Backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool.Name:lower() == selectedFish:lower() then
-            equippedTool = tool
-            tool.Parent = LocalPlayer.Character
-            return true
-        end
-    end
     return false
 end
 
-local function loop()
-    while running and fishAmount > 0 do
-        firePrompt()
-        waitSec(2)
+_G.EnableAutoGive = function(selectedFish, fishAmount)
+    if _G.AutoGiveRunning then return end
+    _G.AutoGiveRunning = true
 
-        if not clickDialogButton("Quest") then
-            waitSec(1)
-            continue
+    task.spawn(function()
+        local given = 0
+
+        while _G.AutoGiveRunning and given < fishAmount do
+            -- STEP 1: OPEN DIALOG
+            firePrompt()
+            waitDialog()
+            task.wait(2)
+
+            -- STEP 2: QUEST
+            respond("Quest")
+            task.wait(2)
+
+            -- STEP 3: EQUIP FISH
+            repeat task.wait(0.2) until equipFish(selectedFish)
+            task.wait(2)
+
+            -- STEP 4: GIVE
+            respond("Give")
+            task.wait(2)
+
+            given += 1
         end
-        waitSec(2)
 
-        if not equipFish() then
-            running = false
-            break
-        end
-        waitSec(2)
-
-        if not clickDialogButton("Give") then
-            waitSec(1)
-            continue
-        end
-        waitSec(2)
-
-        fishAmount -= 1
-    end
-end
-
-_G.EnableAutoGive = function(fish, amount)
-    if running then return end
-    selectedFish = fish
-    fishAmount = amount
-    running = true
-    task.spawn(loop)
+        _G.AutoGiveRunning = false
+    end)
 end
 
 _G.DisableAutoGive = function()
-    running = false
+    _G.AutoGiveRunning = false
 end
