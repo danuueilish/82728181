@@ -467,86 +467,83 @@ _G.AutoGiveSantaLoaded = true
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local ProximityPromptService = game:GetService("ProximityPromptService")
 
 local LocalPlayer = Players.LocalPlayer
 local Backpack = LocalPlayer:WaitForChild("Backpack")
-local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 
-local WinterEvent = ReplicatedStorage:WaitForChild("Events")
-    :WaitForChild("RemoteFunction")
-    :WaitForChild("WinterEvent")
+local Santa =
+    workspace.WinterDeco.ChrismastEventBooth.Rig
 
-local SantaPrompt =
-    workspace.WinterDeco.ChrismastEventBooth.Rig.Torso:WaitForChild("ProximityPrompt")
+local Prompt =
+    Santa:WaitForChild("Torso"):WaitForChild("ProximityPrompt")
+
+local DialogModule =
+    require(ReplicatedStorage.Module.DialogModule)
+
+local dialog =
+    DialogModule.new(
+        "Winter Event",
+        Santa:WaitForChild("Part"):WaitForChild("gui"),
+        Prompt
+    )
+
+dialog:addDialog("Apa yang kamu ingin-kan?", {"Quest", "Check Token", "Bye"})
+dialog:addDialog("Apakah kamu ingin mendapatkan quest?", {"Yes", "Bye"})
+dialog:addDialog("...", {"Give", "Bye"})
 
 local running = false
-local selectedFish = nil
-local fishAmount = 0
-local equippedTool = nil
+local selectedFish
+local fishAmount
+local equippedTool
 
-local function firePrompt(prompt)
-    if not prompt or not prompt:IsA("ProximityPrompt") then return end
-    fireproximityprompt(prompt, 1)
+local function firePrompt()
+    fireproximityprompt(Prompt, 1)
 end
 
-local function equipFish(name)
-    if equippedTool then return true end
+local function equipFish()
+    if equippedTool and equippedTool.Parent == LocalPlayer.Character then
+        return true
+    end
 
-    for _, tool in ipairs(Backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool.Name:lower() == name:lower() then
-            equippedTool = tool
-            tool.Parent = Character
+    for _, v in ipairs(Backpack:GetChildren()) do
+        if v:IsA("Tool") and v.Name:lower() == selectedFish:lower() then
+            equippedTool = v
+            v.Parent = LocalPlayer.Character
             return true
         end
     end
     return false
 end
 
-local function ensureEquipped()
-    if equippedTool and equippedTool.Parent == Character then
-        return true
-    end
-    equippedTool = nil
-    return false
+local function forceDialog(dialogIndex, option)
+    dialog.responded:Fire(dialogIndex, option)
 end
 
-local function clickDialog(option)
-    WinterEvent:InvokeServer(option)
-end
-
-local function stepWait(sec)
+local function waitSec(sec)
     local t = os.clock()
     while os.clock() - t < sec do
         task.wait()
     end
 end
 
-local function autoGiveLoop()
+local function loop()
     while running and fishAmount > 0 do
-        Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
+        LocalPlayer.Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 
-        -- INTERACT SANTA
-        firePrompt(SantaPrompt)
-        stepWait(2)
+        firePrompt()
+        waitSec(2)
 
-        -- QUEST
-        clickDialog("Quest")
-        stepWait(2)
+        forceDialog(1, "Quest")
+        waitSec(2)
 
-        -- EQUIP FISH (JANGAN DILEPAS)
-        if not ensureEquipped() then
-            if not equipFish(selectedFish) then
-                warn("Fish not found:", selectedFish)
-                running = false
-                break
-            end
+        if not equipFish() then
+            running = false
+            break
         end
-        stepWait(2)
+        waitSec(2)
 
-        -- GIVE
-        clickDialog("Give")
-        stepWait(2)
+        forceDialog(3, "Give")
+        waitSec(2)
 
         fishAmount -= 1
     end
@@ -554,13 +551,10 @@ end
 
 _G.EnableAutoGive = function(fish, amount)
     if running then return end
-    if not fish or amount <= 0 then return end
-
     selectedFish = fish
     fishAmount = amount
     running = true
-
-    task.spawn(autoGiveLoop)
+    task.spawn(loop)
 end
 
 _G.DisableAutoGive = function()
