@@ -462,117 +462,107 @@ if not _G.__STREAMER_MODE_LOADED then
     end
 end
 
-if _G.__AUTO_GIVE_WINTER_LOADED then return end
-_G.__AUTO_GIVE_WINTER_LOADED = true
+if _G.AutoGiveSantaLoaded then return end
+_G.AutoGiveSantaLoaded = true
 
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
-local LP = Players.LocalPlayer
+local ProximityPromptService = game:GetService("ProximityPromptService")
 
-local Prompt = workspace
-    :WaitForChild("WinterDeco")
-    :WaitForChild("ChrismastEventBooth")
-    :WaitForChild("Rig")
-    :WaitForChild("Torso")
-    :WaitForChild("ProximityPrompt")
+local LocalPlayer = Players.LocalPlayer
+local Backpack = LocalPlayer:WaitForChild("Backpack")
+local Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 
-_G.AutoGiveEnabled = false
-_G.AutoGiveFish = "lemadang"
-_G.AutoGiveAmount = 1
-_G.AutoGiveThread = nil
+local WinterEvent = ReplicatedStorage:WaitForChild("Events")
+    :WaitForChild("RemoteFunction")
+    :WaitForChild("WinterEvent")
 
-local function firePromptReal()
-    if fireproximityprompt then
-        fireproximityprompt(Prompt, Prompt.HoldDuration or 0.5)
-    end
-end
+local SantaPrompt =
+    workspace.WinterDeco.ChrismastEventBooth.Rig.Torso:WaitForChild("ProximityPrompt")
 
-local function waitDialogGui()
-    local gui
-    for i = 1, 30 do
-        for _, v in pairs(LP.PlayerGui:GetChildren()) do
-            if v:IsA("ScreenGui") and v.Name:lower():find("dialog") then
-                gui = v
-                break
-            end
-        end
-        if gui then break end
-        task.wait(0.1)
-    end
-    return gui
-end
+local running = false
+local selectedFish = nil
+local fishAmount = 0
+local equippedTool = nil
 
-local function pressDialogButton(text)
-    local gui = waitDialogGui()
-    if not gui then return false end
-
-    for _, b in pairs(gui:GetDescendants()) do
-        if (b:IsA("TextButton") or b:IsA("ImageButton")) and b.Text then
-            if b.Text:lower():find(text:lower()) then
-                pcall(function()
-                    b:Activate()
-                end)
-                return true
-            end
-        end
-    end
-    return false
+local function firePrompt(prompt)
+    if not prompt or not prompt:IsA("ProximityPrompt") then return end
+    fireproximityprompt(prompt, 1)
 end
 
 local function equipFish(name)
-    local backpack = LP:WaitForChild("Backpack")
-    for _, t in ipairs(backpack:GetChildren()) do
-        if t:IsA("Tool") and t.Name:lower():find(name:lower()) then
-            t.Parent = LP.Character
+    if equippedTool then return true end
+
+    for _, tool in ipairs(Backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.Name:lower() == name:lower() then
+            equippedTool = tool
+            tool.Parent = Character
             return true
         end
     end
     return false
 end
 
+local function ensureEquipped()
+    if equippedTool and equippedTool.Parent == Character then
+        return true
+    end
+    equippedTool = nil
+    return false
+end
+
+local function clickDialog(option)
+    WinterEvent:InvokeServer(option)
+end
+
+local function stepWait(sec)
+    local t = os.clock()
+    while os.clock() - t < sec do
+        task.wait()
+    end
+end
+
 local function autoGiveLoop()
-    for i = 1, _G.AutoGiveAmount do
-        if not _G.AutoGiveEnabled then break end
+    while running and fishAmount > 0 do
+        Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
 
-        pcall(function()
-            firePromptReal()
-            task.wait(0.8)
+        -- INTERACT SANTA
+        firePrompt(SantaPrompt)
+        stepWait(2)
 
-            pressDialogButton("Quest")
-            task.wait(1)
+        -- QUEST
+        clickDialog("Quest")
+        stepWait(2)
 
-            if equipFish(_G.AutoGiveFish) then
-                task.wait(0.5)
-                pressDialogButton("Give")
-            else
-                _G.AutoGiveEnabled = false
+        -- EQUIP FISH (JANGAN DILEPAS)
+        if not ensureEquipped() then
+            if not equipFish(selectedFish) then
+                warn("Fish not found:", selectedFish)
+                running = false
+                break
             end
-        end)
+        end
+        stepWait(2)
 
-        task.wait(0.8)
+        -- GIVE
+        clickDialog("Give")
+        stepWait(2)
+
+        fishAmount -= 1
     end
-
-    _G.AutoGiveEnabled = false
 end
 
-function _G.EnableAutoGive(fish, amount)
-    if _G.AutoGiveEnabled then return end
+_G.EnableAutoGive = function(fish, amount)
+    if running then return end
+    if not fish or amount <= 0 then return end
 
-    _G.AutoGiveFish = fish or _G.AutoGiveFish
-    _G.AutoGiveAmount = tonumber(amount) or 1
-    _G.AutoGiveEnabled = true
+    selectedFish = fish
+    fishAmount = amount
+    running = true
 
-    if _G.AutoGiveThread then
-        task.cancel(_G.AutoGiveThread)
-    end
-
-    _G.AutoGiveThread = task.spawn(autoGiveLoop)
+    task.spawn(autoGiveLoop)
 end
 
-function _G.DisableAutoGive()
-    _G.AutoGiveEnabled = false
-    if _G.AutoGiveThread then
-        task.cancel(_G.AutoGiveThread)
-        _G.AutoGiveThread = nil
-    end
+_G.DisableAutoGive = function()
+    running = false
 end
