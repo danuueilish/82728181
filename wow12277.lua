@@ -461,3 +461,99 @@ if not _G.__STREAMER_MODE_LOADED then
         stopMasking()
     end
 end
+
+if _G.__AUTO_GIVE_WINTER_LOADED then return end
+_G.__AUTO_GIVE_WINTER_LOADED = true
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LP = Players.LocalPlayer
+
+local WinterEvent = ReplicatedStorage
+    :WaitForChild("Events")
+    :WaitForChild("RemoteFunction")
+    :WaitForChild("WinterEvent")
+
+local Prompt = workspace
+    :WaitForChild("WinterDeco")
+    :WaitForChild("ChrismastEventBooth")
+    :WaitForChild("Rig")
+    :WaitForChild("Torso")
+    :WaitForChild("ProximityPrompt")
+
+_G.AutoGiveEnabled = _G.AutoGiveEnabled or false
+_G.AutoGiveFish = _G.AutoGiveFish or "lemadang"
+_G.AutoGiveAmount = _G.AutoGiveAmount or 1
+_G.AutoGiveThread = _G.AutoGiveThread or nil
+
+local function firePrompt()
+    fireproximityprompt(Prompt)
+end
+
+local function equipFish(fishName)
+    local backpack = LP:WaitForChild("Backpack")
+    for _, tool in ipairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.Name:lower():find(fishName:lower()) then
+            tool.Parent = LP.Character
+            return true
+        end
+    end
+    return false
+end
+
+local function pressDialog(option)
+    WinterEvent:InvokeServer("Dialog", option)
+end
+
+local function autoGiveLoop()
+    while _G.AutoGiveEnabled do
+        for i = 1, _G.AutoGiveAmount do
+            if not _G.AutoGiveEnabled then break end
+
+            pcall(function()
+                firePrompt()
+                task.wait(0.35)
+
+                pressDialog("Quest")
+                task.wait(1)
+
+                if equipFish(_G.AutoGiveFish) then
+                    task.wait(0.4)
+                    pressDialog("Give")
+                else
+                    _G.AutoGiveEnabled = false
+                    break
+                end
+
+                task.wait(0.6)
+            end)
+        end
+
+        _G.AutoGiveEnabled = false
+        task.wait(0.2)
+    end
+end
+
+function _G.EnableAutoGive(fishName, amount)
+    if _G.AutoGiveEnabled then return end
+
+    _G.AutoGiveFish = fishName or _G.AutoGiveFish
+    _G.AutoGiveAmount = tonumber(amount) or _G.AutoGiveAmount
+    _G.AutoGiveEnabled = true
+
+    if _G.AutoGiveThread then
+        task.cancel(_G.AutoGiveThread)
+        _G.AutoGiveThread = nil
+    end
+
+    _G.AutoGiveThread = task.spawn(autoGiveLoop)
+end
+
+function _G.DisableAutoGive()
+    _G.AutoGiveEnabled = false
+
+    if _G.AutoGiveThread then
+        task.cancel(_G.AutoGiveThread)
+        _G.AutoGiveThread = nil
+    end
+end
