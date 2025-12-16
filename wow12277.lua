@@ -466,38 +466,40 @@ if _G.AutoGiveSantaLoaded then return end
 _G.AutoGiveSantaLoaded = true
 
 local Players = game:GetService("Players")
-local ReplicatedStorage = game:GetService("ReplicatedStorage")
-
 local LocalPlayer = Players.LocalPlayer
 local Backpack = LocalPlayer:WaitForChild("Backpack")
+local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
 
-local Santa =
-    workspace.WinterDeco.ChrismastEventBooth.Rig
-
-local Prompt =
-    Santa:WaitForChild("Torso"):WaitForChild("ProximityPrompt")
-
-local DialogModule =
-    require(ReplicatedStorage.Module.DialogModule)
-
-local dialog =
-    DialogModule.new(
-        "Winter Event",
-        Santa:WaitForChild("Part"):WaitForChild("gui"),
-        Prompt
-    )
-
-dialog:addDialog("Apa yang kamu ingin-kan?", {"Quest", "Check Token", "Bye"})
-dialog:addDialog("Apakah kamu ingin mendapatkan quest?", {"Yes", "Bye"})
-dialog:addDialog("...", {"Give", "Bye"})
+local Santa = workspace.WinterDeco.ChrismastEventBooth.Rig
+local Prompt = Santa:WaitForChild("Torso"):WaitForChild("ProximityPrompt")
 
 local running = false
 local selectedFish
 local fishAmount
 local equippedTool
 
+local function waitSec(t)
+    local s = os.clock()
+    while os.clock() - s < t do
+        task.wait()
+    end
+end
+
 local function firePrompt()
     fireproximityprompt(Prompt, 1)
+end
+
+local function clickDialogButton(text)
+    for _, gui in ipairs(PlayerGui:GetDescendants()) do
+        if gui:IsA("TextButton") and gui.Visible then
+            if string.lower(gui.Text) == string.lower(text) then
+                gui:Activate()
+                gui.MouseButton1Click:Fire()
+                return true
+            end
+        end
+    end
+    return false
 end
 
 local function equipFish()
@@ -505,35 +507,25 @@ local function equipFish()
         return true
     end
 
-    for _, v in ipairs(Backpack:GetChildren()) do
-        if v:IsA("Tool") and v.Name:lower() == selectedFish:lower() then
-            equippedTool = v
-            v.Parent = LocalPlayer.Character
+    for _, tool in ipairs(Backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.Name:lower() == selectedFish:lower() then
+            equippedTool = tool
+            tool.Parent = LocalPlayer.Character
             return true
         end
     end
     return false
 end
 
-local function forceDialog(dialogIndex, option)
-    dialog.responded:Fire(dialogIndex, option)
-end
-
-local function waitSec(sec)
-    local t = os.clock()
-    while os.clock() - t < sec do
-        task.wait()
-    end
-end
-
 local function loop()
     while running and fishAmount > 0 do
-        LocalPlayer.Character = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-
         firePrompt()
         waitSec(2)
 
-        forceDialog(1, "Quest")
+        if not clickDialogButton("Quest") then
+            waitSec(1)
+            continue
+        end
         waitSec(2)
 
         if not equipFish() then
@@ -542,7 +534,10 @@ local function loop()
         end
         waitSec(2)
 
-        forceDialog(3, "Give")
+        if not clickDialogButton("Give") then
+            waitSec(1)
+            continue
+        end
         waitSec(2)
 
         fishAmount -= 1
