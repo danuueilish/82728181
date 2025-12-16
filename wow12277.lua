@@ -469,11 +469,6 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LP = Players.LocalPlayer
 
-local WinterEvent = ReplicatedStorage
-    :WaitForChild("Events")
-    :WaitForChild("RemoteFunction")
-    :WaitForChild("WinterEvent")
-
 local Prompt = workspace
     :WaitForChild("WinterDeco")
     :WaitForChild("ChrismastEventBooth")
@@ -481,69 +476,94 @@ local Prompt = workspace
     :WaitForChild("Torso")
     :WaitForChild("ProximityPrompt")
 
-_G.AutoGiveEnabled = _G.AutoGiveEnabled or false
-_G.AutoGiveFish = _G.AutoGiveFish or "lemadang"
-_G.AutoGiveAmount = _G.AutoGiveAmount or 1
-_G.AutoGiveThread = _G.AutoGiveThread or nil
+_G.AutoGiveEnabled = false
+_G.AutoGiveFish = "lemadang"
+_G.AutoGiveAmount = 1
+_G.AutoGiveThread = nil
 
-local function firePrompt()
-    fireproximityprompt(Prompt)
+local function firePromptReal()
+    if fireproximityprompt then
+        fireproximityprompt(Prompt, Prompt.HoldDuration or 0.5)
+    end
 end
 
-local function equipFish(fishName)
+local function waitDialogGui()
+    local gui
+    for i = 1, 30 do
+        for _, v in pairs(LP.PlayerGui:GetChildren()) do
+            if v:IsA("ScreenGui") and v.Name:lower():find("dialog") then
+                gui = v
+                break
+            end
+        end
+        if gui then break end
+        task.wait(0.1)
+    end
+    return gui
+end
+
+local function pressDialogButton(text)
+    local gui = waitDialogGui()
+    if not gui then return false end
+
+    for _, b in pairs(gui:GetDescendants()) do
+        if (b:IsA("TextButton") or b:IsA("ImageButton")) and b.Text then
+            if b.Text:lower():find(text:lower()) then
+                pcall(function()
+                    b:Activate()
+                end)
+                return true
+            end
+        end
+    end
+    return false
+end
+
+local function equipFish(name)
     local backpack = LP:WaitForChild("Backpack")
-    for _, tool in ipairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool.Name:lower():find(fishName:lower()) then
-            tool.Parent = LP.Character
+    for _, t in ipairs(backpack:GetChildren()) do
+        if t:IsA("Tool") and t.Name:lower():find(name:lower()) then
+            t.Parent = LP.Character
             return true
         end
     end
     return false
 end
 
-local function pressDialog(option)
-    WinterEvent:InvokeServer("Dialog", option)
-end
-
 local function autoGiveLoop()
-    while _G.AutoGiveEnabled do
-        for i = 1, _G.AutoGiveAmount do
-            if not _G.AutoGiveEnabled then break end
+    for i = 1, _G.AutoGiveAmount do
+        if not _G.AutoGiveEnabled then break end
 
-            pcall(function()
-                firePrompt()
-                task.wait(0.35)
+        pcall(function()
+            firePromptReal()
+            task.wait(0.8)
 
-                pressDialog("Quest")
-                task.wait(1)
+            pressDialogButton("Quest")
+            task.wait(1)
 
-                if equipFish(_G.AutoGiveFish) then
-                    task.wait(0.4)
-                    pressDialog("Give")
-                else
-                    _G.AutoGiveEnabled = false
-                    break
-                end
+            if equipFish(_G.AutoGiveFish) then
+                task.wait(0.5)
+                pressDialogButton("Give")
+            else
+                _G.AutoGiveEnabled = false
+            end
+        end)
 
-                task.wait(0.6)
-            end)
-        end
-
-        _G.AutoGiveEnabled = false
-        task.wait(0.2)
+        task.wait(0.8)
     end
+
+    _G.AutoGiveEnabled = false
 end
 
-function _G.EnableAutoGive(fishName, amount)
+function _G.EnableAutoGive(fish, amount)
     if _G.AutoGiveEnabled then return end
 
-    _G.AutoGiveFish = fishName or _G.AutoGiveFish
-    _G.AutoGiveAmount = tonumber(amount) or _G.AutoGiveAmount
+    _G.AutoGiveFish = fish or _G.AutoGiveFish
+    _G.AutoGiveAmount = tonumber(amount) or 1
     _G.AutoGiveEnabled = true
 
     if _G.AutoGiveThread then
         task.cancel(_G.AutoGiveThread)
-        _G.AutoGiveThread = nil
     end
 
     _G.AutoGiveThread = task.spawn(autoGiveLoop)
@@ -551,7 +571,6 @@ end
 
 function _G.DisableAutoGive()
     _G.AutoGiveEnabled = false
-
     if _G.AutoGiveThread then
         task.cancel(_G.AutoGiveThread)
         _G.AutoGiveThread = nil
