@@ -41,27 +41,27 @@ local function giveLoop()
             if busy then task.wait() continue end
             busy = true
 
-            -- FIRE NPC (sekali, tunggu)
+            
             fireproximityprompt(Prompt)
             task.wait(2)
 
-            -- QUEST (logic asli server)
+            
             WinterEvent:InvokeServer("CheckQuest")
             WinterEvent:InvokeServer("GetQuestInfo")
-            task.wait(2)
+            task.wait(0.5)
 
-            -- EQUIP FISH (JANGAN DILEPAS)
+            
             local tool = equipFish()
             if not tool then
                 busy = false
                 break
             end
 
-            task.wait(2)
+            task.wait(0.5)
 
-            -- GIVE
+            
             WinterEvent:InvokeServer("EndQuest")
-            task.wait(2)
+            task.wait(0.5)
 
             giveLeft -= 1
             busy = false
