@@ -11,22 +11,14 @@ local SellRemote = ReplicatedStorage
     :WaitForChild("RemoteFunction")
     :WaitForChild("SellFish")
 
-local BackpackRemote = ReplicatedStorage
-    :WaitForChild("Events")
-    :WaitForChild("RemoteFunction")
-    :WaitForChild("Backpack")
-
 local running = false
 local busy = false
 local targetFish = nil
 local sellLeft = 0
 
-local function isFavoriteByName(toolName)
-    local info = BackpackRemote:InvokeServer("GetFishInfo", toolName)
-    if typeof(info) == "string" and info:find("%(Favorite%)") then
-        return true
-    end
-    return false
+local function isFavoriteTool(tool)
+    if not tool or not tool.Name then return false end
+    return tool.Name:find("%(Favorite%)") ~= nil
 end
 
 local function equipFish()
@@ -37,11 +29,12 @@ local function equipFish()
     if not backpack then return nil end
 
     for _, tool in ipairs(backpack:GetChildren()) do
-        if tool:IsA("Tool") and tool.Name:lower():find(targetFish) then
-            if not isFavoriteByName(tool.Name) then
-                tool.Parent = char
-                return tool
-            end
+        if tool:IsA("Tool")
+            and tool.Name:lower():find(targetFish)
+            and not isFavoriteTool(tool) then
+
+            tool.Parent = char
+            return tool
         end
     end
 end
