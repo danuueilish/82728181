@@ -462,79 +462,81 @@ if not _G.__STREAMER_MODE_LOADED then
     end
 end
 
-_G.AutoGiveRunning = false
-
 local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
+
 local LP = Players.LocalPlayer
+local Bloxbiz = ReplicatedStorage:WaitForChild("BloxbizRemotes"):WaitForChild("OnSendGuiImpressions")
+local WinterEvent = ReplicatedStorage:WaitForChild("Events"):WaitForChild("RemoteFunction"):WaitForChild("WinterEvent")
 
-local WinterEvent = ReplicatedStorage.Events.RemoteFunction.WinterEvent
-local DialogModule = require(ReplicatedStorage.Module.DialogModule)
+local Prompt = workspace.WinterDeco.ChrismastEventBooth.Rig.Torso:WaitForChild("ProximityPrompt")
 
-local NPC = workspace.WinterDeco.ChrismastEventBooth.Rig
-local Prompt = NPC.Torso.ProximityPrompt
-local DialogGui = NPC.Part.gui
+local running = false
+local giveAmount = 0
+local selectedFish = nil
+local giving = false
 
-local dialog = DialogModule.new("Winter Event", DialogGui, Prompt)
-
-dialog:addDialog("Apa yang kamu ingin-kan?", {"Quest", "Check Token", "Bye"})
-dialog:addDialog("Apakah kamu ingin mendapatkan quest?", {"Yes", "Bye"})
-dialog:addDialog("...", {"Give", "Bye"})
-
-local function firePrompt()
-    fireproximityprompt(Prompt)
+local function pressDialog(index)
+    Bloxbiz:FireServer({
+        {
+            button_path = "Dialog.dialogResponses." .. index,
+            button_name = tostring(index)
+        }
+    })
 end
 
-local function waitDialog()
-    repeat task.wait() until DialogGui.Enabled == true
-end
+local function equipFish()
+    local char = LP.Character
+    if not char then return end
+    local backpack = LP:FindFirstChildOfClass("Backpack")
+    if not backpack then return end
 
-local function respond(choice)
-    dialog:respond(LP, choice)
-end
-
-local function equipFish(fishName)
-    local backpack = LP.Backpack
-    local tool = backpack:FindFirstChild(fishName)
-    if tool then
-        tool.Parent = LP.Character
-        return true
-    end
-    return false
-end
-
-_G.EnableAutoGive = function(selectedFish, fishAmount)
-    if _G.AutoGiveRunning then return end
-    _G.AutoGiveRunning = true
-
-    task.spawn(function()
-        local given = 0
-
-        while _G.AutoGiveRunning and given < fishAmount do
-            -- STEP 1: OPEN DIALOG
-            firePrompt()
-            waitDialog()
-            task.wait(2)
-
-            -- STEP 2: QUEST
-            respond("Quest")
-            task.wait(2)
-
-            -- STEP 3: EQUIP FISH
-            repeat task.wait(0.2) until equipFish(selectedFish)
-            task.wait(2)
-
-            -- STEP 4: GIVE
-            respond("Give")
-            task.wait(2)
-
-            given += 1
+    for _, tool in pairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") and tool.Name:lower():find(selectedFish) then
+            tool.Parent = char
+            return tool
         end
+    end
+end
 
-        _G.AutoGiveRunning = false
+local function startLoop()
+    task.spawn(function()
+        while running and giveAmount > 0 do
+            if giving then task.wait() continue end
+            giving = true
+
+            fireproximityprompt(Prompt)
+            task.wait(2)
+
+            pressDialog(1)
+            task.wait(2)
+
+            local tool = equipFish()
+            if not tool then
+                giving = false
+                break
+            end
+
+            task.wait(2)
+
+            pressDialog(1)
+            task.wait(2)
+
+            giveAmount -= 1
+            giving = false
+        end
     end)
 end
 
+_G.EnableAutoGive = function(fish, amount)
+    if running then return end
+    selectedFish = tostring(fish):lower()
+    giveAmount = tonumber(amount) or 1
+    running = true
+    startLoop()
+end
+
 _G.DisableAutoGive = function()
-    _G.AutoGiveRunning = false
+    running = false
+    giving = false
 end
