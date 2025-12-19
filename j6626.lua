@@ -1,94 +1,76 @@
+-- Source by Infinite Yield (i modified)
 local Players = game:GetService("Players")
 local LocalPlayer = Players.LocalPlayer
 
-_G.IY_JERK_ENABLED = false
+_G.IY_JERK_RUNNING = false
+_G.IY_JERK_TOOL = nil
 
-local tool
-local track
-local humanoid
-local loopThread
-
-local function isR15(char)
-	return char:FindFirstChild("UpperTorso") ~= nil
-end
-
-local function cleanup()
-	_G.IY_JERK_ENABLED = false
-
-	if track then
-		pcall(function() track:Stop() end)
-		track = nil
-	end
-
-	if loopThread then
-		task.cancel(loopThread)
-		loopThread = nil
-	end
-
-	if tool then
-		pcall(function() tool:Destroy() end)
-		tool = nil
-	end
+local function r15(player)
+	local char = player.Character
+	return char and char:FindFirstChild("UpperTorso") ~= nil
 end
 
 function _G.EnableJerk()
-	if _G.IY_JERK_ENABLED then return end
-	_G.IY_JERK_ENABLED = true
+	if _G.IY_JERK_RUNNING then return end
+	_G.IY_JERK_RUNNING = true
 
-	local char = LocalPlayer.Character or LocalPlayer.CharacterAdded:Wait()
-	humanoid = char:FindFirstChildWhichIsA("Humanoid")
-	if not humanoid then return end
+	local speaker = LocalPlayer
+	local humanoid = speaker.Character:FindFirstChildWhichIsA("Humanoid")
+	local backpack = speaker:FindFirstChildWhichIsA("Backpack")
+	if not humanoid or not backpack then return end
 
-	local backpack = LocalPlayer:FindFirstChildOfClass("Backpack")
-	if not backpack then return end
-
-	tool = Instance.new("Tool")
+	local tool = Instance.new("Tool")
 	tool.Name = "Jerk Off"
+	tool.ToolTip = "in the stripped club. straight up \"jorking it\" . and by \"it\" , haha, well. let's justr say. My peanits."
 	tool.RequiresHandle = false
-	tool.ToolTip =
-		'in the stripped club. straight up "jorking it". and by "it", haha, well. lets just say. My peanits.'
 	tool.Parent = backpack
+	_G.IY_JERK_TOOL = tool
 
-	local active = false
+	local jorkin = false
+	local track = nil
 
-	tool.Equipped:Connect(function()
-		active = true
-	end)
-
-	tool.Unequipped:Connect(function()
-		active = false
+	local function stopTomfoolery()
+		jorkin = false
 		if track then
 			track:Stop()
 			track = nil
 		end
+	end
+
+	tool.Equipped:Connect(function()
+		jorkin = true
 	end)
 
-	humanoid.Died:Connect(cleanup)
+	tool.Unequipped:Connect(stopTomfoolery)
+	humanoid.Died:Connect(stopTomfoolery)
 
-	loopThread = task.spawn(function()
-		while _G.IY_JERK_ENABLED do
-			if not active then
-				task.wait(0.1)
+	task.spawn(function()
+		while _G.IY_JERK_RUNNING and task.wait() do
+			if not jorkin then
 				continue
 			end
 
+			local isR15 = r15(speaker)
+
 			if not track then
 				local anim = Instance.new("Animation")
-				local r15 = isR15(char)
-
-				anim.AnimationId = r15
-					and "rbxassetid://698251653"
-					or "rbxassetid://72042024"
+				anim.AnimationId = (not isR15)
+					and "rbxassetid://72042024"
+					or "rbxassetid://698251653"
 
 				track = humanoid:LoadAnimation(anim)
 			end
 
 			track:Play()
-			track:AdjustSpeed(r15 and 0.7 or 0.65)
+			track:AdjustSpeed(isR15 and 0.7 or 0.65)
 			track.TimePosition = 0.6
 
 			task.wait(0.1)
-			while track and track.TimePosition < (r15 and 0.7 or 0.65) do
+
+			while track
+				and track.TimePosition < ((not isR15) and 0.65 or 0.7)
+				and _G.IY_JERK_RUNNING
+			do
 				task.wait(0.1)
 			end
 
@@ -101,5 +83,12 @@ function _G.EnableJerk()
 end
 
 function _G.DisableJerk()
-	cleanup()
+	_G.IY_JERK_RUNNING = false
+
+	if _G.IY_JERK_TOOL then
+		pcall(function()
+			_G.IY_JERK_TOOL:Destroy()
+		end)
+		_G.IY_JERK_TOOL = nil
+	end
 end
