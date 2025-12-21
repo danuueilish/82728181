@@ -252,7 +252,7 @@ if not _G.__STREAMER_MODE_LOADED then
             if i == 1 then
                 lbl.Text = "Powered by BluuHub"
             else
-                lbl.Text = "5726112"
+                lbl.Text = "discord.gg/alohomora"
             end
         end
     end
@@ -324,10 +324,10 @@ if not _G.__STREAMER_MODE_LOADED then
 
     TextChatService.OnIncomingMessage = function(msg)
         if streamerModeEnabled then
-            msg.PrefixText = "5726112"
+            msg.PrefixText = "discord.gg/alohomora"
             msg.Text = msg.Text
                 :gsub(LP.Name, "Powered by BluuHub")
-                :gsub(LP.DisplayName, "5726112")
+                :gsub(LP.DisplayName, "discord.gg/alohomora")
         end
     end
 
