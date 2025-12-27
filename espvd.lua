@@ -50,17 +50,17 @@ function ESP(plr, logic)
 					a.ZIndex = 10
 					a.Size = n.Size
 					a.Transparency = espTransparency
-          local teamName = tostring(plr.Team)
-          local color3
-          if teamName == "Survivors" then
-              color3 = _G.ESP_SURVIVOR_COLOR or Color3.new(1, 1, 1)
-          elseif teamName == "Killer" then
-              color3 = _G.ESP_KILLER_COLOR or Color3.new(1, 0, 0)
-          else
-              color3 = _G.ESP_SURVIVOR_COLOR or Color3.new(1, 1, 1)
-          end
+                    local teamName = tostring(plr.Team)
+                    local color3
+                    if teamName == "Survivors" then
+                        color3 = _G.ESP_SURVIVOR_COLOR or Color3.new(1, 1, 1)
+                    elseif teamName == "Killer" then
+                        color3 = _G.ESP_KILLER_COLOR or Color3.new(1, 0, 0)
+                    else
+                        color3 = _G.ESP_SURVIVOR_COLOR or Color3.new(1, 1, 1)
+                    end
 
-          a.Color = BrickColor.new(color3
+                    a.Color = BrickColor.new(color3
 				end
 			end
 
