@@ -60,7 +60,7 @@ function ESP(plr, logic)
                         color3 = _G.ESP_SURVIVOR_COLOR or Color3.new(1, 1, 1)
                     end
 
-                    a.Color = BrickColor.new(color3
+                    a.Color = BrickColor.new(color3)
 				end
 			end
 
