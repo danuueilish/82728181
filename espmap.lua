@@ -50,46 +50,82 @@ local function clearTable(tbl)
     end
 end
 
-local function updateCategory(enabled, color, checkFn, storeTbl)
-    if not enabled then
-        clearTable(storeTbl)
-        return
-    end
-
-    for inst, hl in pairs(storeTbl) do
+local function cleanDead(tbl)
+    for inst, hl in pairs(tbl) do
         if not inst or not inst.Parent or not hl or not hl.Parent then
-            storeTbl[inst] = nil
-        else
-            hl.FillColor   = color
-            hl.OutlineColor= color
+            if hl then
+                hl:Destroy()
+            end
+            tbl[inst] = nil
         end
     end
+end
 
-    for _, obj in ipairs(Map:GetDescendants()) do
-        if checkFn(obj) and not storeTbl[obj] then
-            local hl = createHighlight(obj, color)
-            if hl then
-                storeTbl[obj] = hl
-            end
+local function ensureHighlight(inst, tbl, color)
+    local hl = tbl[inst]
+    if not hl then
+        hl = createHighlight(inst, color)
+        if hl then
+            tbl[inst] = hl
         end
+    else
+        hl.FillColor    = color
+        hl.OutlineColor = color
     end
 end
 
 task.spawn(function()
     while task.wait(0.5) do
-        local genEnabled   = _G.ESP_GENERATOR or false
-        local palletEnabled= _G.ESP_PALLET or false
-        local windowEnabled= _G.ESP_WINDOW or false
-        local hookEnabled  = _G.ESP_HOOK or false
+        local genEnabled    = _G.ESP_GENERATOR or false
+        local palletEnabled = _G.ESP_PALLET    or false
+        local windowEnabled = _G.ESP_WINDOW    or false
+        local hookEnabled   = _G.ESP_HOOK      or false
 
-        local genColor     = _G.ESP_GENERATOR_COLOR or Color3.new(1, 0, 0)
-        local palletColor  = _G.ESP_PALLET_COLOR   or Color3.new(0.745098, 0.494118, 0.137255)
-        local windowColor  = _G.ESP_WINDOW_COLOR   or Color3.new(0.25, 0.615, 0.914)
-        local hookColor    = _G.ESP_HOOK_COLOR     or Color3.new(0.854902, 0.298039, 0.298039)
+        local genColor    = _G.ESP_GENERATOR_COLOR or Color3.new(1, 0, 0)
+        local palletColor = _G.ESP_PALLET_COLOR    or Color3.new(0.745098, 0.494118, 0.137255)
+        local windowColor = _G.ESP_WINDOW_COLOR    or Color3.new(0.25, 0.615, 0.914)
+        local hookColor   = _G.ESP_HOOK_COLOR      or Color3.new(0.854902, 0.298039, 0.298039)
 
-        updateCategory(genEnabled,    genColor,    isGenerator, GeneratorESPObjects)
-        updateCategory(palletEnabled, palletColor, isPallet,    PalletESPObjects)
-        updateCategory(windowEnabled, windowColor, isWindow,    WindowESPObjects)
-        updateCategory(hookEnabled,   hookColor,   isHook,      HookESPObjects)
+        if not genEnabled then
+            clearTable(GeneratorESPObjects)
+        else
+            cleanDead(GeneratorESPObjects)
+        end
+
+        if not palletEnabled then
+            clearTable(PalletESPObjects)
+        else
+            cleanDead(PalletESPObjects)
+        end
+
+        if not windowEnabled then
+            clearTable(WindowESPObjects)
+        else
+            cleanDead(WindowESPObjects)
+        end
+
+        if not hookEnabled then
+            clearTable(HookESPObjects)
+        else
+            cleanDead(HookESPObjects)
+        end
+
+        for _, obj in ipairs(Map:GetDescendants()) do
+            if genEnabled and isGenerator(obj) then
+                ensureHighlight(obj, GeneratorESPObjects, genColor)
+            end
+
+            if palletEnabled and isPallet(obj) then
+                ensureHighlight(obj, PalletESPObjects, palletColor)
+            end
+
+            if windowEnabled and isWindow(obj) then
+                ensureHighlight(obj, WindowESPObjects, windowColor)
+            end
+
+            if hookEnabled and isHook(obj) then
+                ensureHighlight(obj, HookESPObjects, hookColor)
+            end
+        end
     end
 end)
