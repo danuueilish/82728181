@@ -6,6 +6,8 @@ local GeneratorESPObjects = {}
 local PalletESPObjects    = {}
 local WindowESPObjects    = {}
 local HookESPObjects      = {}
+local GateESPObjects       = {}
+local GiftESPObjects       = {}
 
 local function isGenerator(obj)
     return obj:IsA("Model") and obj.Name:lower() == "generator"
@@ -23,6 +25,14 @@ end
 
 local function isHook(obj)
     return (obj:IsA("Model") or obj:IsA("BasePart")) and obj.Name:lower() == "hook"
+end
+
+local function isGate(obj)
+    return (obj:IsA("Model") or obj:IsA("BasePart")) and obj.Name:lower() == "gate"
+end
+
+local function isGift(obj)
+    return (obj:IsA("Model") or obj:IsA("BasePart")) and obj.Name:lower() == "gift"
 end
 
 local function createHighlight(target, color)
@@ -80,11 +90,15 @@ task.spawn(function()
         local palletEnabled = _G.ESP_PALLET    or false
         local windowEnabled = _G.ESP_WINDOW    or false
         local hookEnabled   = _G.ESP_HOOK      or false
+        local gateEnabled   = _G.ESP_GATE      or false
+        local giftEnabled   = _G.ESP_GIFT      or false
 
         local genColor    = _G.ESP_GENERATOR_COLOR or Color3.new(1, 0, 0)
         local palletColor = _G.ESP_PALLET_COLOR    or Color3.new(0.745098, 0.494118, 0.137255)
         local windowColor = _G.ESP_WINDOW_COLOR    or Color3.new(0.25, 0.615, 0.914)
         local hookColor   = _G.ESP_HOOK_COLOR      or Color3.new(0.854902, 0.298039, 0.298039)
+        local gateColor = _G.ESP_GATE_COLOR or Color3.new(0.854902, 0.298039, 0.298039)
+        local giftColor = _G.ESP_GIFT_COLOR or Color3.new(0.854902, 0.298039, 0.298039)
 
         if not genEnabled then
             clearTable(GeneratorESPObjects)
@@ -110,6 +124,18 @@ task.spawn(function()
             cleanDead(HookESPObjects)
         end
 
+        if not gateEnabled then
+            clearTable(GateESPObjects)
+        else
+            cleanDead(GateESPObjects)
+        end
+
+        if not giftEnabled then
+            clearTable(GiftESPObjects)
+        else
+            cleanDead(GiftESPObjects)
+        end
+
         for _, obj in ipairs(Map:GetDescendants()) do
             if genEnabled and isGenerator(obj) then
                 ensureHighlight(obj, GeneratorESPObjects, genColor)
@@ -125,6 +151,14 @@ task.spawn(function()
 
             if hookEnabled and isHook(obj) then
                 ensureHighlight(obj, HookESPObjects, hookColor)
+            end
+
+            if gateEnabled and isGate(obj) then
+                ensureHighlight(obj, GateESPObjects, gateColor)
+            end
+
+            if giftEnabled and isGift(obj) then
+                ensureHighlight(obj, GiftESPObjects, giftColor)
             end
         end
     end
