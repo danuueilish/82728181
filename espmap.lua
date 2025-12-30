@@ -1,5 +1,4 @@
 local Workspace = game:GetService("Workspace")
-
 local Map = Workspace:FindFirstChild("Map") or Workspace
 
 local GeneratorESPObjects = {}
@@ -38,7 +37,6 @@ end
 
 local function createHighlight(target, color)
     if not target then return end
-
     local hl = Instance.new("Highlight")
     hl.Name = "VD_MapESP"
     hl.Adornee = target
@@ -48,7 +46,6 @@ local function createHighlight(target, color)
     hl.OutlineTransparency = 0
     hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
     hl.Parent = target
-
     return hl
 end
 
@@ -87,7 +84,6 @@ end
 
 local function getGeneratorProgress(gen)
     local progress = 0
-
     if gen:GetAttribute("Progress") ~= nil then
         progress = gen:GetAttribute("Progress")
     elseif gen:GetAttribute("RepairProgress") ~= nil then
@@ -103,11 +99,9 @@ local function getGeneratorProgress(gen)
             end
         end
     end
-
     if progress > 1 then
         progress = progress / 100
     end
-
     return math.clamp(progress, 0, 1)
 end
 
@@ -125,7 +119,6 @@ end
 
 local function ensureGeneratorLabel(genModel, text, color)
     if not genModel then return end
-
     local gui = GeneratorLabels[genModel]
     if not gui or not gui.Parent then
         gui = Instance.new("BillboardGui")
@@ -134,10 +127,8 @@ local function ensureGeneratorLabel(genModel, text, color)
         gui.StudsOffset = Vector3.new(0, 4, 0)
         gui.AlwaysOnTop = true
         gui.MaxDistance = 500
-
         local rootPart = genModel:FindFirstChildWhichIsA("BasePart")
         gui.Parent = rootPart or genModel
-
         local lbl = Instance.new("TextLabel")
         lbl.Name = "TextLabel"
         lbl.BackgroundTransparency = 1
@@ -148,7 +139,6 @@ local function ensureGeneratorLabel(genModel, text, color)
         lbl.TextColor3 = Color3.new(1, 1, 1)
         lbl.Text = text or ""
         lbl.Parent = gui
-
         GeneratorLabels[genModel] = gui
     end
 
