@@ -1,313 +1,224 @@
-if _G.AlohomoraConfigModuleLoaded then return end
-_G.AlohomoraConfigModuleLoaded = true
-
-local WindUI = _G.WindUI
-local Window = _G.MainWindow
-if not (WindUI and Window) then
-    warn("[Config] _G.WindUI atau _G.MainWindow belum di-set")
-    return
-end
-
-local ConfigManager = Window.ConfigManager
-if not ConfigManager then
-    warn("[Config] Config Manager not found")
-    return
-end
-
-local HttpService = game:GetService("HttpService")
-
-local currentConfigName
-local selectedConfigName
-local configNameInput = ""
-
-local autoLoadConfigFile = "BluuHub.txt"
-
-local savedConfigsDropdown
-
-local function safeRead(path)
-    if isfile and isfile(path) then
-        local ok, content = pcall(readfile, path)
-        if ok then
-            return content
-        end
+local core = {}
+local function getWindow()
+    if getgenv and getgenv().BluuHubWindow then
+        return getgenv().BluuHubWindow
+    end
+    if _G.BluuHubWindow then
+        return _G.BluuHubWindow
     end
     return nil
 end
 
-local function safeWrite(path, content)
-    if writefile then
-        pcall(function()
-            writefile(path, content or "")
-        end)
-    end
-end
+local function getConfigManager()
+    local window = getWindow()
+    if not window then return nil end
 
-local function getAllConfigs()
-    local list = {}
-    local ok, data = pcall(function()
-        return ConfigManager:AllConfigs()
+    local ok, manager = pcall(function()
+        return window.ConfigManager
     end)
 
-    if ok and type(data) == "table" then
-        for _, v in ipairs(data) do
+    if not ok then return nil end
+    return manager
+end
+
+function core.NormalizeName(name)
+    name = tostring(name or "")
+    name = name:gsub("^%s+", ""):gsub("%s+$", "")
+    name = name:gsub("%.json$", "") -- buang .json kalau ada
+    return name
+end
+
+local function getAutoPath()
+    local folderName = "AlohomoraHub"
+    local w = getWindow()
+    if w and w.Folder then
+        folderName = tostring(w.Folder)
+    end
+    return ("WindUI/%s/autoload.txt"):format(folderName)
+end
+
+local function fsAvailable()
+    return (isfile and readfile and writefile and (makefolder or isfolder))
+end
+
+local function ensureFolder()
+    if not fsAvailable() then return end
+    local ok = pcall(function()
+        if makefolder and (not isfolder or not isfolder("WindUI")) then
+            makefolder("WindUI")
+        end
+        local path = getAutoPath()
+        local dir = path:match("^(.*)/[^/]+$") or "WindUI"
+        if makefolder and (not isfolder or not isfolder(dir)) then
+            makefolder(dir)
+        end
+    end)
+end
+
+local function writeAutoName(name)
+    if not fsAvailable() then return end
+    ensureFolder()
+    local path = getAutoPath()
+    pcall(function()
+        writefile(path, tostring(name or ""))
+    end)
+end
+
+local function readAutoName()
+    if not fsAvailable() then return "" end
+    local path = getAutoPath()
+
+    local ok, data = pcall(function()
+        if isfile(path) then
+            return readfile(path) or ""
+        end
+        return ""
+    end)
+
+    if not ok or not data then return "" end
+    return core.NormalizeName(data)
+end
+
+function core.GetAllConfigs()
+    local manager = getConfigManager()
+    if not manager then return {} end
+
+    local ok, list = pcall(function()
+        return manager:AllConfigs()
+    end)
+
+    if not ok or not list then
+        return {}
+    end
+
+    local names = {}
+
+    if #list > 0 then
+        for _, v in ipairs(list) do
             if type(v) == "string" then
-                table.insert(list, v)
-            elseif type(v) == "table" and v.Name then
-                table.insert(list, v.Name)
+                table.insert(names, core.NormalizeName(v))
+            elseif type(v) == "table" then
+                local n = v.Name or v.name or v.Title or v.title or v.File or v.file
+                if n then
+                    table.insert(names, core.NormalizeName(n))
+                end
+            end
+        end
+    else
+        for k, v in pairs(list) do
+            if type(v) == "string" then
+                table.insert(names, core.NormalizeName(v))
+            elseif type(v) == "table" then
+                local n = v.Name or v.name or v.Title or v.title or v.File or v.file or k
+                if n then
+                    table.insert(names, core.NormalizeName(n))
+                end
+            elseif type(k) == "string" then
+                table.insert(names, core.NormalizeName(k))
             end
         end
     end
 
-    table.sort(list)
-    return list
+    table.sort(names, function(a, b)
+        return a:lower() < b:lower()
+    end)
+
+    return names
 end
 
-local function setCurrentConfig(name)
-    if not name or name == "" then
-        currentConfigName = nil
-        return nil
-    end
-    currentConfigName = name
-    return ConfigManager:CreateConfig(name)
-end
-
-local function getAutoLoadName()
-    local data = safeRead(autoLoadConfigFile)
-    if data and data ~= "" then
-        return data
-    end
-    return nil
-end
-
-local function setAutoLoadName(name)
-    safeWrite(autoLoadConfigFile, name or "")
-end
-
-local function autoLoadConfig(dropdown)
-    local name = getAutoLoadName()
-    if not name or name == "" then
-        return
+function core.Save(name)
+    name = core.NormalizeName(name)
+    if name == "" then
+        return false, "EMPTY_NAME"
     end
 
-    local cfg = setCurrentConfig(name)
-    if not cfg then
-        return
+    local manager = getConfigManager()
+    if not manager then
+        return false, "NO_CONFIG_MANAGER"
     end
 
+    local config = manager:CreateConfig(name)
     local ok, err = pcall(function()
-        cfg:Load()
+        config:Save()
     end)
 
     if not ok then
-        warn("[Config] failed auto load:", err)
-        return
+        return false, err
     end
 
-    if dropdown and dropdown.Refresh then
-        local list = getAllConfigs()
-        dropdown:Refresh(list)
-        if dropdown.Select and table.find(list, name) then
-            dropdown:Select(name)
-        end
-    end
-
-    WindUI:Notify({
-        Title = "Config",
-        Content = "Auto loaded config: " .. name,
-        Duration = 3
-    })
+    return true
 end
 
-local SettingsTab = _G.SettingsTab or Window:Tab({
-    Title = "Settings",
-    Icon = "settings"
-})
-
-local ConfigSection = SettingsTab:Section({
-    Title = "Configuration",
-    Opened = true,
-    Box = true
-})
-
-ConfigSection:Input({
-    Title = "Config Name",
-    Placeholder = "Enter Config Name",
-    Type = "Input",
-    Callback = function(text)
-        configNameInput = text
+function core.Load(name)
+    name = core.NormalizeName(name)
+    if name == "" then
+        return false, "EMPTY_NAME"
     end
-})
 
-ConfigSection:Button({
-    Title = "Save Config",
-    Callback = function()
-        local name = (configNameInput or ""):gsub("^%s+",""):gsub("%s+$","")
-        if name == "" then
-            WindUI:Notify({
-                Title = "Config",
-                Content = "Enter config name first.",
-                Duration = 2
-            })
-            return
-        end
-
-        local cfg = setCurrentConfig(name)
-        if not cfg then
-            WindUI:Notify({
-                Title = "Config",
-                Content = "Failed create new config.",
-                Duration = 2
-            })
-            return
-        end
-
-        local ok, err = pcall(function()
-            cfg:Save()
-        end)
-
-        if ok then
-            WindUI:Notify({
-                Title = "Config",
-                Content = "Saved: " .. name,
-                Duration = 2
-            })
-
-            selectedConfigName = name
-
-            if savedConfigsDropdown and savedConfigsDropdown.Refresh then
-                local list = getAllConfigs()
-                savedConfigsDropdown:Refresh(list)
-                if savedConfigsDropdown.Select and table.find(list, name) then
-                    savedConfigsDropdown:Select(name)
-                end
-            end
-        else
-            WindUI:Notify({
-                Title = "Config",
-                Content = "Error save: " .. tostring(err),
-                Duration = 3
-            })
-        end
+    local manager = getConfigManager()
+    if not manager then
+        return false, "NO_CONFIG_MANAGER"
     end
-})
 
-savedConfigsDropdown = ConfigSection:Dropdown({
-    Title = "Saved Config",
-    Values = getAllConfigs(),
-    Multi = false,
-    AllowNone = true,
-    Callback = function(option)
-        if type(option) == "table" and option.Title then
-            selectedConfigName = option.Title
-        else
-            selectedConfigName = option
-        end
+    local config = manager:CreateConfig(name)
+    local ok, err = pcall(function()
+        config:Load()
+    end)
+
+    if not ok then
+        return false, err
     end
-})
 
-ConfigSection:Button({
-    Title = "Load Config",
-    Callback = function()
-        local name = selectedConfigName
-            or ((configNameInput or ""):gsub("^%s+",""):gsub("%s+$",""))
+    return true
+end
 
-        if not name or name == "" then
-            WindUI:Notify({
-                Title = "Config",
-                Content = "Choose or fill your config name first.",
-                Duration = 2
-            })
-            return
-        end
-
-        local cfg = setCurrentConfig(name)
-        if not cfg then
-            WindUI:Notify({
-                Title = "Config",
-                Content = "Failed Load config.",
-                Duration = 2
-            })
-            return
-        end
-
-        local ok, err = pcall(function()
-            cfg:Load()
-        end)
-
-        if ok then
-            WindUI:Notify({
-                Title = "Config",
-                Content = "Loaded: " .. name,
-                Duration = 2
-            })
-        else
-            WindUI:Notify({
-                Title = "Config",
-                Content = "Error load: " .. tostring(err),
-                Duration = 3
-            })
-        end
+function core.Delete(name)
+    name = core.NormalizeName(name)
+    if name == "" then
+        return false, "EMPTY_NAME"
     end
-})
 
-ConfigSection:Button({
-    Title = "Refresh Config List",
-    Callback = function()
-        if savedConfigsDropdown and savedConfigsDropdown.Refresh then
-            savedConfigsDropdown:Refresh(getAllConfigs())
-        end
-        WindUI:Notify({
-            Title = "Config",
-            Content = "Refreshing List.",
-            Duration = 2
-        })
+    local manager = getConfigManager()
+    if not manager then
+        return false, "NO_CONFIG_MANAGER"
     end
-})
 
-ConfigSection:Button({
-    Title = "Set as Auto Load",
-    Callback = function()
-        local name = selectedConfigName
-            or ((configNameInput or ""):gsub("^%s+",""):gsub("%s+$",""))
+    local config = manager:CreateConfig(name)
+    local ok, err = pcall(function()
+        config:Delete()
+    end)
 
-        if not name or name == "" then
-            WindUI:Notify({
-                Title = "Config",
-                Content = "Choose config first.",
-                Duration = 1
-            })
-            return
-        end
-
-        setAutoLoadName(name)
-
-        WindUI:Notify({
-            Title = "Config",
-            Content = "Auto Load set to: " .. name,
-            Duration = 1
-        })
+    if not ok then
+        return false, err
     end
-})
 
-ConfigSection:Button({
-    Title = "Reset Auto Load",
-    Callback = function()
-        setAutoLoadName("")
-        WindUI:Notify({
-            Title = "Config",
-            Content = "Auto Load have been reset.",
-            Duration = 1
-        })
+    return true
+end
+
+function core.SetAutoLoad(name)
+    name = core.NormalizeName(name)
+    if name == "" then
+        writeAutoName("")
+        return false, "EMPTY_NAME"
     end
-})
+    writeAutoName(name)
+    return true
+end
 
-task.spawn(function()
-    autoLoadConfig(savedConfigsDropdown)
-end)
+function core.ResetAutoLoad()
+    writeAutoName("")
+    return true
+end
 
-WindUI:Notify({
-    Title = "Config",
-    Content = "Config Loaded!",
-    Icon = "check",
-    Duration = 1
-})
+function core.GetAutoLoad()
+    return readAutoName()
+end
+
+function core.AutoLoadOnStart()
+    local name = core.GetAutoLoad()
+    if name == "" then return false end
+    local ok, err = core.Load(name)
+    return ok, err
+end
+_G.BluuConfigCore = core
+return core
