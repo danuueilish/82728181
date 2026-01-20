@@ -96,7 +96,7 @@ _G.EnableAutoConvert = function(weightLimitKg, modeStr)
     if running then return end
     maxWeightKg = tonumber(weightLimitKg) or 50
     modeStr = tostring(modeStr or ""):lower()
-    if modeStr == "all" or then
+    if modeStr == "all" then
         convertMode = "all"
     else
         convertMode = "single"
