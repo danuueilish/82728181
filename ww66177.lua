@@ -7,9 +7,10 @@ local ConvertRemote = ReplicatedStorage
     :WaitForChild("Events")
     :WaitForChild("RemoteFunction")
     :WaitForChild("Gopay")
-local running = false
-local busy = false
+local running     = false
+local busy        = false
 local maxWeightKg = 50
+local convertMode = "single"
 local function isFavoriteTool(tool)
     if not tool or not tool.Name then return false end
     return tool.Name:find("%(Favorite%)") ~= nil
@@ -39,6 +40,23 @@ local function equipFishUnderLimit()
     end
     return nil
 end
+local function equipAllUnderLimit()
+    local char = LP.Character
+    if not char then return 0 end
+    local backpack = LP:FindFirstChildOfClass("Backpack")
+    if not backpack then return 0 end
+    local count = 0
+    for _, tool in ipairs(backpack:GetChildren()) do
+        if tool:IsA("Tool") and not isFavoriteTool(tool) then
+            local w = getWeightFromName(tool.Name)
+            if w and w <= maxWeightKg then
+                tool.Parent = char
+                count += 1
+            end
+        end
+    end
+    return count
+end
 local function convertLoop()
     task.spawn(function()
         while running do
@@ -47,26 +65,46 @@ local function convertLoop()
                 continue
             end
             busy = true
-            local tool = equipFishUnderLimit()
-            if not tool then
-                busy = false
-                break
+            if convertMode == "all" then
+                local equippedCount = equipAllUnderLimit()
+                if equippedCount == 0 then
+                    busy = false
+                    break
+                end
+                task.wait(0.5)
+                pcall(function()
+                    ConvertRemote:InvokeServer("ConvertIkan")
+                end)
+            else
+                local tool = equipFishUnderLimit()
+                if not tool then
+                    busy = false
+                    break
+                end
+                task.wait(0.5)
+                pcall(function()
+                    ConvertRemote:InvokeServer("ConvertIkan")
+                end)
             end
-            task.wait(0.5)
-            ConvertRemote:InvokeServer("ConvertIkan")
             busy = false
             task.wait(0.2)
         end
         running = false
     end)
 end
-_G.EnableAutoConvert = function(weightLimitKg)
+_G.EnableAutoConvert = function(weightLimitKg, modeStr)
     if running then return end
     maxWeightKg = tonumber(weightLimitKg) or 50
+    modeStr = tostring(modeStr or ""):lower()
+    if modeStr == "all" or then
+        convertMode = "all"
+    else
+        convertMode = "single"
+    end
     running = true
     convertLoop()
 end
 _G.DisableAutoConvert = function()
     running = false
-    busy = false
+    busy    = false
 end
