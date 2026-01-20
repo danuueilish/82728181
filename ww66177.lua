@@ -39,6 +39,15 @@ local function equipFishUnderLimit()
     end
     return nil
 end
+local function updateTokenUI()
+    if not _G.BluuHub_SetGopayToken then return end
+    local ok, result = pcall(function()
+        return ConvertRemote:InvokeServer("CheckToken")
+    end)
+    if ok and result ~= nil then
+        pcall(_G.BluuHub_SetGopayToken, result)
+    end
+end
 local function convertLoop()
     task.spawn(function()
         while running do
@@ -53,7 +62,10 @@ local function convertLoop()
                 break
             end
             task.wait(0.5)
-            ConvertRemote:InvokeServer("ConvertIkan")
+            pcall(function()
+                ConvertRemote:InvokeServer("ConvertIkan")
+            end)
+            updateTokenUI()
             busy = false
             task.wait(0.2)
         end
