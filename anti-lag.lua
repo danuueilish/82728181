@@ -135,6 +135,7 @@ if not _G.__ANTI_LAG_FISHING_LOADED then
         _G.__ANTI_LAG_STATIC_DONE = true
 
         local ws = workspace
+        local mapFolder = ws:FindFirstChild("MapContent")
 
         for _, obj in ipairs(ws:GetDescendants()) do
             if obj:IsA("ParticleEmitter")
@@ -161,11 +162,21 @@ if not _G.__ANTI_LAG_FISHING_LOADED then
 
         for _, part in ipairs(ws:GetDescendants()) do
             if part:IsA("BasePart") then
-                if not part:IsDescendantOf(character) then
+                if part:IsDescendantOf(character) then
+                    continue
+                end
+                if mapFolder and part:IsDescendantOf(mapFolder) then
+                    pcall(function()
+                        part:Destroy()
+                    end)
+                else
                     part.Material = Enum.Material.SmoothPlastic
                     part.CastShadow = false
                     part.Reflectance = 0
                     part.Transparency = 1
+                    part.CanCollide = false
+                    part.CanTouch = false
+                    part.CanQuery = false
                 end
             end
         end
