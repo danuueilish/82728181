@@ -1,26 +1,25 @@
-if _G.__UNLIMITED_CAMERA_LOADED then
-    return
-end
+if _G.__UNLIMITED_CAMERA_LOADED then return end
 _G.__UNLIMITED_CAMERA_LOADED = true
-local Players       = game:GetService("Players")
+local Players = game:GetService("Players")
 local StarterPlayer = game:GetService("StarterPlayer")
-local LP            = Players.LocalPlayer
+local LP = Players.LocalPlayer
 local DEFAULT_MAX = StarterPlayer.CameraMaxZoomDistance
 local DEFAULT_MIN = StarterPlayer.CameraMinZoomDistance
 local MAX_ZOOM = 1e9
 local MIN_ZOOM = 0.5
+
 local function applyUnlimited()
-    if not LP then
-        return
+    if not LP then return end
+    if LP.CameraMaxZoomDistance ~= MAX_ZOOM then
+        LP.CameraMaxZoomDistance = MAX_ZOOM
     end
-    LP.CameraMaxZoomDistance = MAX_ZOOM
-    LP.CameraMinZoomDistance = MIN_ZOOM
+    if LP.CameraMinZoomDistance ~= MIN_ZOOM then
+        LP.CameraMinZoomDistance = MIN_ZOOM
+    end
 end
 
 local function restoreDefault()
-    if not LP then
-        return
-    end
+    if not LP then return end
     LP.CameraMaxZoomDistance = DEFAULT_MAX
     LP.CameraMinZoomDistance = DEFAULT_MIN
 end
@@ -36,14 +35,14 @@ function _G.DisableUnlimitedCamera()
 end
 
 if LP then
-    LP:GetPropertyChangedSignal("CameraMaxZoomDistance"):Connect(function()
-        if _G.__UnlimitedCameraEnabled then
-            applyUnlimited()
-        end
-    end)
-    LP:GetPropertyChangedSignal("CameraMinZoomDistance"):Connect(function()
-        if _G.__UnlimitedCameraEnabled then
-            applyUnlimited()
-        end
-    end)
+    local reapplying = false
+    local function safeApply()
+        if not _G.__UnlimitedCameraEnabled then return end
+        if reapplying then return end
+        reapplying = true
+        applyUnlimited()
+        reapplying = false
+    end
+    LP:GetPropertyChangedSignal("CameraMaxZoomDistance"):Connect(safeApply)
+    LP:GetPropertyChangedSignal("CameraMinZoomDistance"):Connect(safeApply)
 end
