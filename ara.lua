@@ -4,8 +4,8 @@ local Players = game:GetService("Players")
 local ReplicatedStorage = game:GetService("ReplicatedStorage")
 local LP = Players.LocalPlayer
 local plr = LP
-local WindUI = _G.Bluu_WindUI
-local MainTab = _G.Bluu_MainTab
+local WindUI = getgenv().BluuHubWindUI
+local MainTab = getgenv().BluuHubWindow
 if not (WindUI and MainTab) then return end
 local EquipToolsRF = ReplicatedStorage
     :WaitForChild("Events")
