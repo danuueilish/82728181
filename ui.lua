@@ -65,6 +65,7 @@ local function refreshAutoInfo()
     end
 end
 
+do
 autoInfoParagraph = SettingsTab:Paragraph({
     Title = "Auto Load Status",
     Desc  = "Auto Load: (none)",
@@ -76,6 +77,7 @@ local ok, err = pcall(function()
 end)
 if not ok then
     warn("[BluuHub] AutoLoadOnStart error:", err)
+end
 end
 
 SettingsTab:Input({
