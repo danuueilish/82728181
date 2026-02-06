@@ -21,9 +21,11 @@ local function notify(title, msg, dur)
         print("[Config]", title or "", msg or "")
     end
 end
-local ConfigSection = SettingsTab:Section({
+local SettingsTab:Section({
     Title  = "Configuration",
-    Opened = true,
+    TextSize = 20,
+	FontWeight = Enum.FontWeight.SemiBold,
+    TextXAlignment = "Center",
 })
 local currentName = ""
 local selectedName = ""
@@ -62,14 +64,28 @@ local function refreshAutoInfo()
         autoInfoParagraph:SetDesc("Auto Load: (none)")
     end
 end
-ConfigSection:Input({
+
+autoInfoParagraph = SettingsTab:Paragraph({
+    Title = "Auto Load Status",
+    Desc  = "Auto Load: (none)",
+})
+refreshConfigs()
+refreshAutoInfo()
+local ok, err = pcall(function()
+    ConfigCore.AutoLoadOnStart()
+end)
+if not ok then
+    warn("[BluuHub] AutoLoadOnStart error:", err)
+end
+
+SettingsTab:Input({
     Title       = "Config Name",
     Placeholder = "Your Config Name",
     Callback    = function(text)
         currentName = tostring(text or "")
     end
 })
-configDropdown = ConfigSection:Dropdown({
+configDropdown = SettingsTab:Dropdown({
     Title   = "Config List",
     Values  = {"<no configs>"},
     Multi   = false,
@@ -81,11 +97,13 @@ configDropdown = ConfigSection:Dropdown({
         end
     end
 })
-ConfigSection:Button({
+SettingTab:Space({ Columns = 0.2 })
+CGroup = SettingsTab:Group()
+CGroup:Button({
     Title    = "Save",
-    Justify  = "Left",
+    Justify  = "Center",
     Icon     = "lucide:save",
-    IconAlign = "Right",
+    IconAlign = "Left",
     Callback = function()
         local name = currentName
         if name == "" then
@@ -105,12 +123,12 @@ ConfigSection:Button({
         end
     end
 })
-
-ConfigSection:Button({
+CGroup:Space({ Columns = 0.2 })
+CGroup:Button({
     Title    = "Delete",
-    Justify  = "Left",
+    Justify  = "Center",
     Icon     = "lucide:trash-2",
-    IconAlign = "Right",
+    IconAlign = "Left",
     Callback = function()
         local name = selectedName
         name = ConfigCore.NormalizeName(name)
@@ -132,12 +150,13 @@ ConfigSection:Button({
         end
     end
 })
-
-ConfigSection:Button({
-    Title    = "Set Auto Load",
-    Justify  = "Left",
+SettingsTab:Space({ Columns = 0.2 })
+CGroup2 = SettingsTab:Group()
+CGroup2:Button({
+    Title    = "Set as Auto Load",
+    Justify  = "Center",
     Icon     = "lucide:zap",
-    IconAlign = "Right",
+    IconAlign = "Left",
     Callback = function()
         local name = selectedName
         name = ConfigCore.NormalizeName(name)
@@ -154,28 +173,15 @@ ConfigSection:Button({
         end
     end
 })
-
-ConfigSection:Button({
-    Title    = "Reset Auto Load",
-    Justify  = "Left",
+CGroup2:Space({ Columns = 0.2 })
+CGroup2:Button({
+    Title    = "Reset Config",
+    Justify  = "Center",
     Icon     = "lucide:rotate-ccw",
-    IconAlign = "Right",
+    IconAlign = "Left",
     Callback = function()
         ConfigCore.ResetAutoLoad()
         notify("Config", "Auto Load reset.", 1.5)
         refreshAutoInfo()
     end
 })
-
-autoInfoParagraph = ConfigSection:Paragraph({
-    Title = "Auto Load Info",
-    Desc  = "Auto Load: (none)",
-})
-refreshConfigs()
-refreshAutoInfo()
-local ok, err = pcall(function()
-    ConfigCore.AutoLoadOnStart()
-end)
-if not ok then
-    warn("[BluuHub] AutoLoadOnStart error:", err)
-end
