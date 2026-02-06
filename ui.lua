@@ -99,7 +99,7 @@ configDropdown = SettingsTab:Dropdown({
         end
     end
 })
-SettingTab:Space({ Columns = 0.2 })
+SettingsTab:Space({ Columns = 0.2 })
 CGroup = SettingsTab:Group()
 CGroup:Button({
     Title    = "Save",
