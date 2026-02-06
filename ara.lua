@@ -118,12 +118,12 @@ local function handleToggleOff()
     notify("Aura", "Aura removed", 0.5)
 end
 
-local AuraSection = MainTab:Section({
+local ExtrasTab:Section({
     Title = "Aura",
     Opened = true,
 })
-
-AuraSection:Dropdown({
+ExtrasTab:Space({ Columns = 0.2 })
+ExtrasTab:Dropdown({
     Title = "Select Aura",
     Values = auraList,
     Default = auraList[1],
@@ -146,7 +146,7 @@ AuraSection:Dropdown({
     end,
 })
 
-AuraSection:Dropdown({
+ExtrasTab:Dropdown({
     Title = "Method",
     Values = methodOptions,
     Default = methodOptions[1],
@@ -159,7 +159,7 @@ AuraSection:Dropdown({
     end,
 })
 
-AuraSection:Slider({
+ExtrasTab:Slider({
     Title = "Rotation Delay",
     Step = 0.5,
     Value = {
@@ -175,7 +175,7 @@ AuraSection:Slider({
     end,
 })
 
-ApplyAuraToggle = AuraSection:Toggle({
+ExtrasTab = AuraSection:Toggle({
     Title = "Apply Aura",
     Default = false,
     Flag = "Bluu_AuraApply",
