@@ -23,6 +23,7 @@ local function notify(title, msg, dur)
 end
 local ConfigSection = SettingsTab:Section({
     Title  = "Configuration",
+    Opened = true,
     TextSize = 20,
 	FontWeight = Enum.FontWeight.SemiBold,
     TextXAlignment = "Center",
@@ -104,7 +105,7 @@ CGroup = ConfigSection:Group()
 CGroup:Button({
     Title    = "Save",
     Justify  = "Center",
-    Icon     = "lucide:save",
+    Icon     = "solar:diskette-bold",
     IconAlign = "Left",
     Callback = function()
         local name = currentName
@@ -129,7 +130,7 @@ CGroup:Space({ Columns = 0.2 })
 CGroup:Button({
     Title    = "Delete",
     Justify  = "Center",
-    Icon     = "lucide:trash-2",
+    Icon     = "solar:paper-bin-bold",
     IconAlign = "Left",
     Callback = function()
         local name = selectedName
@@ -157,7 +158,7 @@ CGroup2 = ConfigSection:Group()
 CGroup2:Button({
     Title    = "Set as Auto Load",
     Justify  = "Center",
-    Icon     = "lucide:zap",
+    Icon     = "solar:bolt-circle-bold",
     IconAlign = "Left",
     Callback = function()
         local name = selectedName
@@ -179,7 +180,7 @@ CGroup2:Space({ Columns = 0.2 })
 CGroup2:Button({
     Title    = "Reset Config",
     Justify  = "Center",
-    Icon     = "lucide:rotate-ccw",
+    Icon     = "solar:refresh-circle-bold",
     IconAlign = "Left",
     Callback = function()
         ConfigCore.ResetAutoLoad()
