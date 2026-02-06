@@ -21,7 +21,7 @@ local function notify(title, msg, dur)
         print("[Config]", title or "", msg or "")
     end
 end
-local SettingsTab:Section({
+local ConfigSection = SettingsTab:Section({
     Title  = "Configuration",
     TextSize = 20,
 	FontWeight = Enum.FontWeight.SemiBold,
@@ -66,7 +66,7 @@ local function refreshAutoInfo()
 end
 
 do
-autoInfoParagraph = SettingsTab:Paragraph({
+autoInfoParagraph = ConfigSection:Paragraph({
     Title = "Auto Load Status",
     Desc  = "Auto Load: (none)",
 })
@@ -80,14 +80,14 @@ if not ok then
 end
 end
 
-SettingsTab:Input({
+ConfigSection:Input({
     Title       = "Config Name",
     Placeholder = "Your Config Name",
     Callback    = function(text)
         currentName = tostring(text or "")
     end
 })
-configDropdown = SettingsTab:Dropdown({
+configDropdown = ConfigSection:Dropdown({
     Title   = "Config List",
     Values  = {"<no configs>"},
     Multi   = false,
@@ -99,8 +99,8 @@ configDropdown = SettingsTab:Dropdown({
         end
     end
 })
-SettingsTab:Space({ Columns = 0.2 })
-CGroup = SettingsTab:Group()
+ConfigSection:Space({ Columns = 0.2 })
+CGroup = ConfigSection:Group()
 CGroup:Button({
     Title    = "Save",
     Justify  = "Center",
@@ -152,8 +152,8 @@ CGroup:Button({
         end
     end
 })
-SettingsTab:Space({ Columns = 0.2 })
-CGroup2 = SettingsTab:Group()
+ConfigSection:Space({ Columns = 0.2 })
+CGroup2 = ConfigSection:Group()
 CGroup2:Button({
     Title    = "Set as Auto Load",
     Justify  = "Center",
