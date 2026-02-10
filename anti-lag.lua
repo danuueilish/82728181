@@ -6,7 +6,6 @@ if not _G.__ANTI_LAG_FISHING_LOADED then
     local StarterPlayer = game:GetService("StarterPlayer")
     local ReplicatedStorage = game:GetService("ReplicatedStorage")
     local Lighting = game:GetService("Lighting")
-
     local LP = Players.LocalPlayer
     local cam = workspace.CurrentCamera
 
@@ -84,7 +83,7 @@ if not _G.__ANTI_LAG_FISHING_LOADED then
         Lighting.OutdoorAmbient = Color3.new(0, 0, 0)
         Lighting.GlobalShadows = false
         Lighting.FogStart = 0
-        Lighting.FogEnd = 30
+        Lighting.FogEnd = 80
     end
 
     local function restoreLighting()
