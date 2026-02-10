@@ -77,13 +77,13 @@ if not _G.__ANTI_LAG_FISHING_LOADED then
     end
 
     local function applyLowLighting()
-        Lighting.Brightness = 0
+        Lighting.Brightness = 70
         Lighting.ClockTime = 0
         Lighting.Ambient = Color3.new(0, 0, 0)
         Lighting.OutdoorAmbient = Color3.new(0, 0, 0)
         Lighting.GlobalShadows = false
         Lighting.FogStart = 0
-        Lighting.FogEnd = 80
+        Lighting.FogEnd = 30
     end
 
     local function restoreLighting()
