@@ -92,6 +92,7 @@ configDropdown = ConfigSection:Dropdown({
     Title   = "Config List",
     Values  = {"<no configs>"},
     Multi   = false,
+	Flag = "ConfigUser",
     Callback = function(value)
         if value == "<no configs>" then
             selectedName = ""
