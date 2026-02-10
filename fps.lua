@@ -2,6 +2,23 @@ if not _G.__BLUU_PINGFPS_TAG_LOADED then
     _G.__BLUU_PINGFPS_TAG_LOADED = true
     local RunService = game:GetService("RunService")
     local Stats = game:GetService("Stats")
+    local function safeTag(window, props)
+    if not window or typeof(window.Tag) ~= "function" then
+        return nil
+    end
+
+    local ok, tag = pcall(function()
+        return window:Tag(props)
+    end)
+
+    if ok then
+        return tag
+    else
+        -- optional: print(debug.traceback(tag)) kalau mau debug
+        return nil
+    end
+end
+    
     local conn
     local statusTag
     local lastStatus
