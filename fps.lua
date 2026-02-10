@@ -73,7 +73,7 @@ if not _G.__BLUU_PINGFPS_TAG_LOADED then
                 local status = ("PING: %dms | FPS: %d"):format(pingVal, fps)
                 if status ~= lastStatus then
                     destroyTag()
-                    statusTag = window:Tag({
+                    statusTag = safeTag(window, {
                         Title = status,
                         Icon = icon,
                         Color = color,
