@@ -166,7 +166,6 @@ function ESP(plr, logic)
     end)
 end
 
--- ==== TRACER (auto ikut ESP) ====
 local Camera = workspace.CurrentCamera
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
     Camera = workspace.CurrentCamera
@@ -190,13 +189,11 @@ Players.PlayerRemoving:Connect(function(plr)
     clearTracerForPlayer(plr)
 end)
 
--- loop tracer (jalan terus, tapi cuma gambar kalau ESPenabled = true)
 if not tracerConn then
     tracerConn = RunService.RenderStepped:Connect(function()
         if not Camera then return end
 
         if not ESPenabled then
-            -- ESP off → sembunyiin semua tracer, tapi nggak dihapus
             for _, line in pairs(playerTrackers) do
                 if line then
                     line.Visible = false
@@ -223,7 +220,6 @@ if not tracerConn then
                         end
 
                         line.Visible = true
-                        -- dari tengah bawah layar (kaki kamera)
                         line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
                         line.To   = Vector2.new(screenPos.X, screenPos.Y)
 
@@ -268,8 +264,7 @@ function _G.DisableESP()
             c:Destroy()
         end
     end
-
-    -- hapus tracer juga
+    
     for plr, line in pairs(playerTrackers) do
         if line then
             pcall(function()
