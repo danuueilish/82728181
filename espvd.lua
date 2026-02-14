@@ -166,6 +166,91 @@ function ESP(plr, logic)
     end)
 end
 
+-- ==== TRACER (auto ikut ESP) ====
+local Camera = workspace.CurrentCamera
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+    Camera = workspace.CurrentCamera
+end)
+
+local playerTrackers = {}
+local tracerConn
+
+local function clearTracerForPlayer(plr)
+    local line = playerTrackers[plr]
+    if line then
+        line.Visible = false
+        pcall(function()
+            line:Remove()
+        end)
+        playerTrackers[plr] = nil
+    end
+end
+
+Players.PlayerRemoving:Connect(function(plr)
+    clearTracerForPlayer(plr)
+end)
+
+-- loop tracer (jalan terus, tapi cuma gambar kalau ESPenabled = true)
+if not tracerConn then
+    tracerConn = RunService.RenderStepped:Connect(function()
+        if not Camera then return end
+
+        if not ESPenabled then
+            -- ESP off → sembunyiin semua tracer, tapi nggak dihapus
+            for _, line in pairs(playerTrackers) do
+                if line then
+                    line.Visible = false
+                end
+            end
+            return
+        end
+
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer then
+                local char = plr.Character
+                local hrp  = char and char:FindFirstChild("HumanoidRootPart")
+
+                if hrp then
+                    local screenPos, onScreen = Camera:WorldToViewportPoint(hrp.Position)
+                    local line = playerTrackers[plr]
+
+                    if onScreen then
+                        if not line then
+                            line = Drawing.new("Line")
+                            line.Thickness = 1.5
+                            line.Transparency = 1
+                            playerTrackers[plr] = line
+                        end
+
+                        line.Visible = true
+                        -- dari tengah bawah layar (kaki kamera)
+                        line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                        line.To   = Vector2.new(screenPos.X, screenPos.Y)
+
+                        local teamName = plr.Team and plr.Team.Name or ""
+
+                        if teamName == "Survivors" then
+                            line.Color = _G.ESP_SURVIVOR_COLOR or Color3.new(1, 1, 1)
+                        elseif teamName == "Killer" then
+                            line.Color = _G.ESP_KILLER_COLOR   or Color3.new(1, 0, 0)
+                        else
+                            line.Color = _G.ESP_SURVIVOR_COLOR or Color3.new(1, 1, 1)
+                        end
+                    else
+                        if line then
+                            line.Visible = false
+                        end
+                    end
+                else
+                    if playerTrackers[plr] then
+                        playerTrackers[plr].Visible = false
+                    end
+                end
+            end
+        end
+    end)
+end
+
 function _G.EnableESP()
     if CHMSenabled then return end
     ESPenabled = true
@@ -182,5 +267,15 @@ function _G.DisableESP()
         if string.sub(c.Name, -4) == "_ESP" then
             c:Destroy()
         end
+    end
+
+    -- hapus tracer juga
+    for plr, line in pairs(playerTrackers) do
+        if line then
+            pcall(function()
+                line:Remove()
+            end)
+        end
+        playerTrackers[plr] = nil
     end
 end
