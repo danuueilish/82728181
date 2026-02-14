@@ -75,7 +75,6 @@ function ESP(plr, logic)
                 end
             end
 
-            -- teks di atas head
             if plr.Character:FindFirstChild("Head") then
                 local BillboardGui = Instance.new("BillboardGui")
                 local TextLabel = Instance.new("TextLabel")
@@ -220,7 +219,7 @@ if not tracerConn then
                         end
 
                         line.Visible = true
-                        line.From = Vector2.new(Camera.ViewportSize.X / 2, Camera.ViewportSize.Y)
+                        line.From = Vector2.new(Camera.ViewportSize.X / 2, 0)
                         line.To   = Vector2.new(screenPos.X, screenPos.Y)
 
                         local teamName = plr.Team and plr.Team.Name or ""
@@ -264,7 +263,7 @@ function _G.DisableESP()
             c:Destroy()
         end
     end
-    
+
     for plr, line in pairs(playerTrackers) do
         if line then
             pcall(function()
