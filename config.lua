@@ -32,7 +32,7 @@ local function getAutoPath()
     return ("WindUI/%s/autoload.txt"):format(folderName)
 end
 local function fsAvailable()
-    return (isfile and readfile and writefile and (makefolder or isfolder))
+    return (isfile and readfile and writefile and listfiles and (makefolder or isfolder))
 end
 local function ensureFolder()
     if not fsAvailable() then return end
