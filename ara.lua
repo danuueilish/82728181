@@ -20,6 +20,7 @@ _G.AuraList = {
     "Purple Wings",
     "Blue Heartfull Aura",
     "Pink Heartfull Aura",
+    "Radiance Aura",
 }
 _G.AuraMethodList = {
     "Single Aura",
