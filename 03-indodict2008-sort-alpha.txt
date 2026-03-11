@@ -19123,7 +19123,7 @@ libra
 ligina
 lithuania
 loro
-loro saé
+loro saÃ©
 lorosae
 lp
 lpj
@@ -34474,7 +34474,7 @@ reyog
 reyot
 rezeki
 rezim
-répondez
+rÃ©pondez
 rhumba
 ria
 riah
@@ -34762,7 +34762,7 @@ sars
 sab.
 sabit merah
 sabtu
-saé
+saÃ©
 safar
 samoa amerika
 samudera arktik
