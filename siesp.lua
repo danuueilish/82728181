@@ -468,39 +468,64 @@ local function clearAnimalESPs()
     table.clear(animalESPObjects)
 end
 
-local function setupAnimalESPs()
-    clearAnimalESPs()
-    local coop = env.findOwnedCoop and env.findOwnedCoop()
-    local barn = env.findOwnedBarn and env.findOwnedBarn()
+local animalStatusCache = {}
+
+local function updateAnimalStatusCache(coop, barn)
     if coop then
         for i = 1, 12 do
             local chicken = coop:FindFirstChild("Chicken_" .. i)
             if not chicken then continue end
+            local arm   = chicken:FindFirstChild("Right Arm")
+            local oh    = arm and arm:FindFirstChild("OH_Status")
+            local label = oh and oh:FindFirstChild("Label")
+            local statusText, statusColor = getAnimalStatus(label)
+            animalStatusCache["Chicken_"..i] = { text = statusText, color = statusColor }
+        end
+    end
+    if barn then
+        for i = 1, 15 do
+            local cow = barn:FindFirstChild("Cow_" .. i)
+            if not cow then continue end
+            local node  = cow:FindFirstChild("node_0")
+            local oh    = node and node:FindFirstChild("OH_Status")
+            local label = oh and oh:FindFirstChild("Label")
+            local statusText, statusColor = getAnimalStatus(label)
+            animalStatusCache["Cow_"..i] = { text = statusText, color = statusColor }
+        end
+    end
+end
 
-            local function getChickenLabel()
-                local arm = chicken:FindFirstChild("Right Arm")
-                local oh  = arm and arm:FindFirstChild("OH_Status")
-                return oh and oh:FindFirstChild("Label")
-            end
+local function setupAnimalESPs()
+    clearAnimalESPs()
+    local coop = env.findOwnedCoop and env.findOwnedCoop()
+    local barn = env.findOwnedBarn and env.findOwnedBarn()
+    updateAnimalStatusCache(coop, barn)
+    if coop then
+        for i = 1, 12 do
+            local chicken = coop:FindFirstChild("Chicken_" .. i)
+            if not chicken then continue end
+            local key = "Chicken_"..i
 
             local esp = Library:Add({
                 Model               = chicken,
-                Name                = "Chicken " .. i,
-                Color               = Color3.fromRGB(255, 220, 100),
-                MaxDistance         = 300,
+                Name                = string.format("Chicken %d", i),
+                Color               = Color3.fromRGB(255, 255, 255),
+                MaxDistance         = 800,
                 ESPType             = "Highlight",
                 FillColor           = Color3.fromRGB(255, 220, 100),
                 OutlineColor        = Color3.fromRGB(255, 220, 100),
-                FillTransparency    = 0.7,
+                FillTransparency    = 0.75,
                 OutlineTransparency = 0,
-                StudsOffset         = Vector3.new(0, 1.5, 0),
+                TextSize            = 13,
+                StudsOffset         = Vector3.new(0, 2, 0),
                 BeforeUpdate = function(espObj)
-                    local label = getChickenLabel()
-                    local statusText, statusColor = getAnimalStatus(label)
-                    espObj.CurrentSettings.Name         = string.format("Chicken %d\n%s", i, statusText)
-                    espObj.CurrentSettings.Color        = statusColor
-                    espObj.CurrentSettings.FillColor    = statusColor
-                    espObj.CurrentSettings.OutlineColor = statusColor
+                    local cached = animalStatusCache[key]
+                    if cached then
+                        espObj.CurrentSettings.Name         = string.format("Chicken %d  %s", i, cached.text)
+                        espObj.CurrentSettings.OutlineColor = cached.color
+                        espObj.CurrentSettings.FillColor    = cached.color
+                        espObj.CurrentSettings.Color        = Color3.fromRGB(255, 255, 255)
+                    end
                 end,
             })
 
@@ -511,31 +536,28 @@ local function setupAnimalESPs()
         for i = 1, 15 do
             local cow = barn:FindFirstChild("Cow_" .. i)
             if not cow then continue end
-
-            local function getCowLabel()
-                local node = cow:FindFirstChild("node_0")
-                local oh   = node and node:FindFirstChild("OH_Status")
-                return oh and oh:FindFirstChild("Label")
-            end
+            local key = "Cow_"..i
 
             local esp = Library:Add({
                 Model               = cow,
-                Name                = "Cow " .. i,
-                Color               = Color3.fromRGB(130, 200, 255),
-                MaxDistance         = 300,
+                Name                = string.format("Cow %d", i),
+                Color               = Color3.fromRGB(255, 255, 255),
+                MaxDistance         = 800,
                 ESPType             = "Highlight",
                 FillColor           = Color3.fromRGB(130, 200, 255),
                 OutlineColor        = Color3.fromRGB(130, 200, 255),
-                FillTransparency    = 0.7,
+                FillTransparency    = 0.75,
                 OutlineTransparency = 0,
-                StudsOffset         = Vector3.new(0, 2, 0),
+                TextSize            = 13,
+                StudsOffset         = Vector3.new(0, 2.5, 0),
                 BeforeUpdate = function(espObj)
-                    local label = getCowLabel()
-                    local statusText, statusColor = getAnimalStatus(label)
-                    espObj.CurrentSettings.Name         = string.format("Cow %d\n%s", i, statusText)
-                    espObj.CurrentSettings.Color        = statusColor
-                    espObj.CurrentSettings.FillColor    = statusColor
-                    espObj.CurrentSettings.OutlineColor = statusColor
+                    local cached = animalStatusCache[key]
+                    if cached then
+                        espObj.CurrentSettings.Name         = string.format("Cow %d  %s", i, cached.text)
+                        espObj.CurrentSettings.OutlineColor = cached.color
+                        espObj.CurrentSettings.FillColor    = cached.color
+                        espObj.CurrentSettings.Color        = Color3.fromRGB(255, 255, 255)
+                    end
                 end,
             })
 
@@ -550,8 +572,17 @@ local function startAnimalESP()
     setupAnimalESPs()
     task.spawn(function()
         while animalESPActive do
-            task.wait(10)
+            task.wait(15)
             if animalESPActive then pcall(setupAnimalESPs) end
+        end
+    end)
+    task.spawn(function()
+        while animalESPActive do
+            task.wait(0.5)
+            if not animalESPActive then break end
+            local coop = env.findOwnedCoop and env.findOwnedCoop()
+            local barn = env.findOwnedBarn and env.findOwnedBarn()
+            pcall(updateAnimalStatusCache, coop, barn)
         end
     end)
 end
