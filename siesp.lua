@@ -431,7 +431,7 @@ for _, player in ipairs(Players:GetPlayers()) do
 end
 
 Players.PlayerAdded:Connect(InitESP)
-
+local env = getgenv()
 local animalESPActive  = false
 local animalESPObjects = {}
 
@@ -560,3 +560,7 @@ local function stopAnimalESP()
     animalESPActive = false
     clearAnimalESPs()
 end
+getgenv().BluuAnimalESP = {
+    start = startAnimalESP,
+    stop  = stopAnimalESP,
+}
