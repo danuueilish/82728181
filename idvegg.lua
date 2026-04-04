@@ -252,12 +252,8 @@ local EGG_COLOR   = Color3.fromHex("FFD700")
 local EGG_OUTLINE = Color3.fromHex("FFFFFF")
 local function AddEggESP(egg)
     if not egg or not egg.Parent then return end
-    local attachment = egg:FindFirstChildOfClass("Attachment")
-        or egg:FindFirstChild("Attachment")
-    local adornTarget = attachment or egg
     Library:Add({
         Model               = egg,
-        TextModel           = adornTarget,
         Name                = "Easter Egg",
         Color               = EGG_COLOR,
         MaxDistance         = 9e9,
@@ -267,7 +263,7 @@ local function AddEggESP(egg)
         FillTransparency    = 0.45,
         OutlineTransparency = 0,
         TextSize            = 22,
-        StudsOffset         = Vector3.new(0, 4, 0),
+        StudsOffset         = Vector3.new(0, 3.5, 0),
     })
 end
 
