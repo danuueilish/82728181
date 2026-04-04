@@ -256,7 +256,7 @@ local function AddEggESP(egg)
         Model               = egg,
         Name                = "Easter Egg",
         Color               = EGG_COLOR,
-        MaxDistance         = 5000,
+        MaxDistance         = 9e9,
         ESPType             = "Highlight",
         FillColor           = EGG_COLOR,
         OutlineColor        = EGG_OUTLINE,
