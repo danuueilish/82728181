@@ -252,8 +252,12 @@ local EGG_COLOR   = Color3.fromHex("FFD700")
 local EGG_OUTLINE = Color3.fromHex("FFFFFF")
 local function AddEggESP(egg)
     if not egg or not egg.Parent then return end
+    local adornTarget = egg:IsA("BasePart") and egg
+        or egg:FindFirstChildWhichIsA("BasePart")
+        or egg
     Library:Add({
         Model               = egg,
+        TextModel           = adornTarget,
         Name                = "Easter Egg",
         Color               = EGG_COLOR,
         MaxDistance         = 9e9,
@@ -263,32 +267,35 @@ local function AddEggESP(egg)
         FillTransparency    = 0.45,
         OutlineTransparency = 0,
         TextSize            = 22,
-        StudsOffset         = Vector3.new(0, 3.5, 0),
+        StudsOffset         = Vector3.new(0, 4, 0),
     })
 end
 
-local function HookFolder(folder)
+local function HookEggFolder(folder)
     for _, egg in ipairs(folder:GetChildren()) do
         task.spawn(AddEggESP, egg)
     end
     folder.ChildAdded:Connect(function(egg)
         task.wait(0.2)
-        AddEggESP(egg)
+        if not Library.Destroyed then
+            AddEggESP(egg)
+        end
     end)
 end
 
 task.spawn(function()
-    local temp = workspace:FindFirstChild("Temp") or workspace:WaitForChild("Temp", 15)
+    local temp = workspace:FindFirstChild("Temp")
+        or workspace:WaitForChild("Temp", 15)
     if not temp then return end
-
     local eggFolder = temp:FindFirstChild("EasterEgg")
     if eggFolder then
-        HookFolder(eggFolder)
-    else
-        temp.ChildAdded:Connect(function(child)
-            if child.Name == "EasterEgg" then
-                HookFolder(child)
-            end
-        end)
+        HookEggFolder(eggFolder)
     end
+    temp.ChildAdded:Connect(function(child)
+        if child.Name == "EasterEgg" and not Library.Destroyed then
+            task.wait(0.2)
+            HookEggFolder(child)
+        end
+    end)
 end)
+
