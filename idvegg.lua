@@ -125,7 +125,7 @@ function Library:Add(s)
     s.TextModel           = typeof(s.TextModel) == "Instance" and s.TextModel or s.Model
     s.Visible             = typeof(s.Visible) == "boolean" and s.Visible or true
     s.Color               = typeof(s.Color) == "Color3"  and s.Color  or Color3.new()
-    s.MaxDistance         = typeof(s.MaxDistance) == "number" and s.MaxDistance or 5000
+    s.MaxDistance         = typeof(s.MaxDistance) == "number" and s.MaxDistance or 9e9
     s.StudsOffset         = typeof(s.StudsOffset) == "Vector3" and s.StudsOffset or Vector3.new(0, 3.5, 0)
     s.TextSize            = typeof(s.TextSize) == "number" and s.TextSize or 22
     s.FillColor           = typeof(s.FillColor) == "Color3" and s.FillColor or Color3.new()
@@ -252,8 +252,12 @@ local EGG_COLOR   = Color3.fromHex("FFD700")
 local EGG_OUTLINE = Color3.fromHex("FFFFFF")
 local function AddEggESP(egg)
     if not egg or not egg.Parent then return end
+    local attachment = egg:FindFirstChildOfClass("Attachment")
+        or egg:FindFirstChild("Attachment")
+    local adornTarget = attachment or egg
     Library:Add({
         Model               = egg,
+        TextModel           = adornTarget,
         Name                = "Easter Egg",
         Color               = EGG_COLOR,
         MaxDistance         = 9e9,
@@ -263,7 +267,7 @@ local function AddEggESP(egg)
         FillTransparency    = 0.45,
         OutlineTransparency = 0,
         TextSize            = 22,
-        StudsOffset         = Vector3.new(0, 3.5, 0),
+        StudsOffset         = Vector3.new(0, 4, 0),
     })
 end
 
