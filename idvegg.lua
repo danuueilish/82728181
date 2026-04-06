@@ -248,8 +248,10 @@ table.insert(Library.Connections, RunService.RenderStepped:Connect(function()
 end))
 
 getgenv().BluuEasterEggESP = Library
+
 local EGG_COLOR   = Color3.fromHex("FFD700")
 local EGG_OUTLINE = Color3.fromHex("FFFFFF")
+
 local function AddEggESP(egg)
     if not egg or not egg.Parent then return end
     local adornTarget = egg:IsA("BasePart") and egg
@@ -271,31 +273,27 @@ local function AddEggESP(egg)
     })
 end
 
-local function HookEggFolder(folder)
-    for _, egg in ipairs(folder:GetChildren()) do
+local function HookEgg(egg)
+    if not Library.Destroyed then
         task.spawn(AddEggESP, egg)
     end
-    folder.ChildAdded:Connect(function(egg)
-        task.wait(0.2)
-        if not Library.Destroyed then
-            AddEggESP(egg)
-        end
-    end)
 end
 
-task.spawn(function()
-    local temp = workspace:FindFirstChild("Temp")
-        or workspace:WaitForChild("Temp", 15)
-    if not temp then return end
-    local eggFolder = temp:FindFirstChild("EasterEgg")
-    if eggFolder then
-        HookEggFolder(eggFolder)
-    end
-    temp.ChildAdded:Connect(function(child)
-        if child.Name == "EasterEgg" and not Library.Destroyed then
-            task.wait(0.2)
-            HookEggFolder(child)
-        end
-    end)
+local CollectionService = game:GetService("CollectionService")
+
+for _, egg in ipairs(CollectionService:GetTagged("EasterEgg")) do
+    HookEgg(egg)
+end
+
+CollectionService:GetInstanceAddedSignal("EasterEgg"):Connect(function(egg)
+    task.wait(0.1)
+    HookEgg(egg)
 end)
 
+CollectionService:GetInstanceRemovedSignal("EasterEgg"):Connect(function(egg)
+    for idx, e in Library.ESP do
+        if e and e.CurrentSettings and e.CurrentSettings.Model == egg then
+            e:Destroy()
+        end
+    end
+end)
