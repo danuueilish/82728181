@@ -297,3 +297,52 @@ CollectionService:GetInstanceRemovedSignal("EasterEgg"):Connect(function(egg)
         end
     end
 end)
+local RS = game:GetService("ReplicatedStorage")
+local EggRemotes = RS:WaitForChild("EasterEggRemotes")
+local EggReveal = EggRemotes:WaitForChild("EggReveal")
+local EggHide = EggRemotes:WaitForChild("EggHide")
+local eggPositionCache = {}
+local cacheDrawings = {}
+
+EggReveal.OnClientEvent:Connect(function(eggId, cf)
+    if type(eggId) ~= "string" then return end
+    if typeof(cf) ~= "CFrame" then return end
+    eggPositionCache[eggId] = cf.Position
+end)
+
+EggHide.OnClientEvent:Connect(function(eggId)
+    if type(eggId) ~= "string" then return end
+    eggPositionCache[eggId] = nil
+end)
+
+RunService.RenderStepped:Connect(function()
+    for id, d in pairs(cacheDrawings) do
+        if d then d:Remove() end
+    end
+    cacheDrawings = {}
+
+    for id, pos in pairs(eggPositionCache) do
+        local screenPos, onScreen = camera:WorldToViewportPoint(pos)
+        local dist = (camera.CFrame.Position - pos).Magnitude
+
+        if onScreen then
+            local label = Drawing.new("Text")
+            label.Text = string.format("Easter Egg #%s", id)
+            label.Position = Vector2.new(screenPos.X, screenPos.Y - 20)
+            label.Size = 16
+            label.Color = Color3.fromHex("FFD700")
+            label.Outline = true
+            label.Visible = true
+            cacheDrawings[id .. "_name"] = label
+
+            local distLabel = Drawing.new("Text")
+            distLabel.Text = string.format("[%.0f studs]", dist)
+            distLabel.Position = Vector2.new(screenPos.X, screenPos.Y)
+            distLabel.Size = 14
+            distLabel.Color = Color3.fromHex("FFFFFF")
+            distLabel.Outline = true
+            distLabel.Visible = true
+            cacheDrawings[id .. "_dist"] = distLabel
+        end
+    end
+end)
