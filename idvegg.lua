@@ -3,14 +3,11 @@ if getgenv().BluuEasterEggESP then
     getgenv().BluuEasterEggESP = nil
     task.wait(0.1)
 end
-
 local cloneref = getgenv().cloneref or function(inst) return inst end
 local Players     = cloneref(game:GetService("Players"))
 local RunService  = cloneref(game:GetService("RunService"))
 local CoreGui     = cloneref(game:GetService("CoreGui"))
-
 local LP = Players.LocalPlayer
-
 local tablefreeze = function(t)
     local proxy, data = {}, table.clone(t)
     return setmetatable(proxy, {
@@ -18,28 +15,24 @@ local tablefreeze = function(t)
         __newindex = function() end,
     })
 end
-
 local function GetPivot(inst)
     if inst.ClassName == "Bone"       then return inst.TransformedWorldCFrame
     elseif inst.ClassName == "Attachment" then return inst.WorldCFrame
     elseif inst.ClassName == "Camera" then return inst.CFrame
     else return inst:GetPivot() end
 end
-
 local function RandomString(len)
     len = tonumber(len) or math.random(10, 20)
     local arr = {}
     for i = 1, len do arr[i] = string.char(math.random(32, 126)) end
     return table.concat(arr)
 end
-
 local function SafeCallback(fn, ...)
     if not (fn and typeof(fn) == "function") then return end
     local r = table.pack(xpcall(fn, function(e) return e end, ...))
     if not r[1] then return nil end
     return table.unpack(r, 2, r.n)
 end
-
 local IL = {
     Create = function(t, p)
         local i = Instance.new(t)
@@ -70,14 +63,11 @@ do
                or  function() return LP.PlayerGui end
     tg:Destroy()
 end
-
 local AF = IL.Create("Folder",    { Parent = getui(), Name = RandomString() })
 local SF = IL.Create("Folder",    { Parent = game,    Name = RandomString() })
 local MG = IL.Create("ScreenGui", { Parent = getui(), Name = RandomString(), IgnoreGuiInset = true, ResetOnSpawn = false, ClipToDeviceSafeArea = false, DisplayOrder = 999999 })
 local BG = IL.Create("ScreenGui", { Parent = getui(), Name = RandomString(), IgnoreGuiInset = true, ResetOnSpawn = false, ClipToDeviceSafeArea = false, DisplayOrder = 999999 })
-
 local camera = workspace.CurrentCamera
-
 local Library = {
     Destroyed = false,
     ActiveFolder  = AF, StorageFolder = SF,
@@ -94,18 +84,15 @@ local Library = {
     RainbowHueSetup = 0, RainbowHue = 0,
     RainbowStep = 0,     RainbowColor = Color3.new(),
 }
-
 local function wtvp(...)
     camera = camera or workspace.CurrentCamera
     if not camera then return Vector2.new(), false end
     return camera:WorldToViewportPoint(...)
 end
-
 function Library:Clear()
     if self.Destroyed then return end
     for _, e in pairs(self.ESP) do if e then e:Destroy() end end
 end
-
 function Library:Destroy()
     if self.Destroyed then return end
     self:Clear()
@@ -117,7 +104,6 @@ function Library:Destroy()
     table.clear(self.Connections)
     getgenv().BluuEasterEggESP = nil
 end
-
 function Library:Add(s)
     if self.Destroyed then return end
     s.ESPType             = string.lower(s.ESPType or "highlight")
@@ -132,12 +118,10 @@ function Library:Add(s)
     s.OutlineColor        = typeof(s.OutlineColor) == "Color3" and s.OutlineColor or Color3.new(1,1,1)
     s.FillTransparency    = typeof(s.FillTransparency) == "number" and s.FillTransparency or 0.45
     s.OutlineTransparency = typeof(s.OutlineTransparency) == "number" and s.OutlineTransparency or 0
-
     local ESP = {
         Index = RandomString(), OriginalSettings = tablefreeze(s),
         CurrentSettings = s,   Hidden = false, Deleted = false, Connections = {},
     }
-
     local Billboard = IL.Create("BillboardGui", {
         Parent = BG, Name = ESP.Index, Enabled = true, ResetOnSpawn = false,
         AlwaysOnTop = true, Size = UDim2.new(0, 220, 0, 60),
@@ -156,7 +140,6 @@ function Library:Add(s)
         FillColor = s.FillColor, OutlineColor = s.OutlineColor,
         FillTransparency = s.FillTransparency, OutlineTransparency = s.OutlineTransparency,
     })
-
     function ESP:Destroy()
         if self.Deleted then return end
         self.Deleted = true
@@ -167,34 +150,27 @@ function Library:Add(s)
         table.clear(self.Connections)
         self.Render = function() end
     end
-
     local function Show()
         if not ESP or ESP.Deleted then return end
         ESP.Hidden = false
         Billboard.Enabled = true
         Highlighter.Adornee = s.Model; Highlighter.Parent = AF
     end
-
     local function Hide()
         if not ESP or ESP.Deleted then return end
         ESP.Hidden = true
         Billboard.Enabled = false
         Highlighter.Adornee = nil; Highlighter.Parent = SF
     end
-
     function ESP:Render()
         if self.Deleted or not s then return end
         if not s.Visible then Hide() return end
-
         if not s.ModelRoot then s.ModelRoot = IL.FindPrimaryPart(s.Model) end
         local root = s.ModelRoot or s.Model
-
         local dist = IL.DistanceFrom(root, camera)
         if dist > s.MaxDistance then Hide() return end
-
         local _, onScreen = wtvp(GetPivot(root).Position)
         if not onScreen then Hide() return else Show() end
-
         if Library.GlobalConfig.Billboards then
             Billboard.Enabled = true
             BillboardText.Text = Library.GlobalConfig.Distance
@@ -294,55 +270,6 @@ CollectionService:GetInstanceRemovedSignal("EasterEgg"):Connect(function(egg)
     for idx, e in Library.ESP do
         if e and e.CurrentSettings and e.CurrentSettings.Model == egg then
             e:Destroy()
-        end
-    end
-end)
-local RS = game:GetService("ReplicatedStorage")
-local EggRemotes = RS:WaitForChild("EasterEggRemotes")
-local EggReveal = EggRemotes:WaitForChild("EggReveal")
-local EggHide = EggRemotes:WaitForChild("EggHide")
-local eggPositionCache = {}
-local cacheDrawings = {}
-
-EggReveal.OnClientEvent:Connect(function(eggId, cf)
-    if type(eggId) ~= "string" then return end
-    if typeof(cf) ~= "CFrame" then return end
-    eggPositionCache[eggId] = cf.Position
-end)
-
-EggHide.OnClientEvent:Connect(function(eggId)
-    if type(eggId) ~= "string" then return end
-    eggPositionCache[eggId] = nil
-end)
-
-RunService.RenderStepped:Connect(function()
-    for id, d in pairs(cacheDrawings) do
-        if d then d:Remove() end
-    end
-    cacheDrawings = {}
-
-    for id, pos in pairs(eggPositionCache) do
-        local screenPos, onScreen = camera:WorldToViewportPoint(pos)
-        local dist = (camera.CFrame.Position - pos).Magnitude
-
-        if onScreen then
-            local label = Drawing.new("Text")
-            label.Text = string.format("Easter Egg #%s", id)
-            label.Position = Vector2.new(screenPos.X, screenPos.Y - 20)
-            label.Size = 16
-            label.Color = Color3.fromHex("FFD700")
-            label.Outline = true
-            label.Visible = true
-            cacheDrawings[id .. "_name"] = label
-
-            local distLabel = Drawing.new("Text")
-            distLabel.Text = string.format("[%.0f studs]", dist)
-            distLabel.Position = Vector2.new(screenPos.X, screenPos.Y)
-            distLabel.Size = 14
-            distLabel.Color = Color3.fromHex("FFFFFF")
-            distLabel.Outline = true
-            distLabel.Visible = true
-            cacheDrawings[id .. "_dist"] = distLabel
         end
     end
 end)
