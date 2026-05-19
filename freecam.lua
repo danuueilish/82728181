@@ -21,7 +21,7 @@ Spring.__index = Spring
 local exp = math.exp
 
 function Spring.new(freq, pos)
-    return setmetatable({ f = freq, p = pos, v = 0 }, Spring)
+    return setmetatable({ f = freq, p = pos, v = pos * 0 }, Spring)
 end
 function Spring:Update(dt, goal)
     local f = self.f * 2 * math.pi
