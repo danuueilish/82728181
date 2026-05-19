@@ -18,17 +18,28 @@ end)
 -- Spring
 local Spring = {}
 Spring.__index = Spring
-local exp = math.exp
 
 function Spring.new(freq, pos)
-    return setmetatable({ f = freq, p = pos, v = pos * 0 }, Spring)
+    local self = setmetatable({}, Spring)
+    self.f = freq
+    self.p = pos
+    self.v = pos * 0
+    return self
 end
+
 function Spring:Update(dt, goal)
-    local f = self.f * 2 * math.pi
-    self.v = (f * dt * ((goal - self.p) * f - self.v) + self.v) * exp(-f * dt)
-    self.p = goal + (self.v * dt - (goal - self.p) * (f * dt + 1)) * exp(-f * dt)
-    return self.p
+    local f      = self.f * 2 * math.pi
+    local p0     = self.p
+    local v0     = self.v
+    local offset = goal - p0
+    local decay  = math.exp(-f * dt)
+    local p1     = goal + (v0 * dt - offset * (f * dt + 1)) * decay
+    local v1     = (f * dt * (offset * f - v0) + v0) * decay
+    self.p = p1
+    self.v = v1
+    return p1
 end
+
 function Spring:Reset(pos)
     self.p = pos
     self.v = pos * 0
