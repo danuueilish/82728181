@@ -10,12 +10,10 @@ local localPlayer   = Players.LocalPlayer
 local currentCamera = workspace.CurrentCamera
 
 workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
-    if workspace.CurrentCamera then
-        currentCamera = workspace.CurrentCamera
-    end
+    if workspace.CurrentCamera then currentCamera = workspace.CurrentCamera end
 end)
 
--- Spring
+-- Spring (proven implementation)
 local Spring = {}
 Spring.__index = Spring
 
@@ -45,92 +43,119 @@ function Spring:Reset(pos)
     self.v = pos * 0
 end
 
-local SPEED  = 30
-local v19    = 0
-local v16    = 0
-local v17    = 0
-local v57    = 70
+-- State
+local SPEED      = 30
+local v19        = 0       -- auto-forward
+local v16        = 0       -- yaw
+local v17        = 0       -- pitch
+local v57        = 70      -- fov
 
 local clamp = math.clamp
 local rad   = math.rad
 local deg   = math.deg
 
-local velSpring = Spring.new(1,   Vector3.new(0, 0, 0))
-local panSpring = Spring.new(0.7, Vector2.zero)
+local velSpring  = Spring.new(1,   Vector3.new(0, 0, 0))
+local panSpring  = Spring.new(0.7, Vector2.zero)
 
 local fcRunning  = false
 local v20        = nil
-local isDragging = false
 local hiddenGuis = {}
 
-local v51 = {}
-local v50 = {
-    [Enum.KeyCode.W] = true,
-    [Enum.KeyCode.S] = true,
-    [Enum.KeyCode.A] = true,
-    [Enum.KeyCode.D] = true,
-    [Enum.KeyCode.Q] = true,
-    [Enum.KeyCode.E] = true,
-}
-
+-- PlayerModule controls (joystick mobile + WASD PC)
+local controls = nil
 task.spawn(function()
     pcall(function()
         local ps = localPlayer:WaitForChild("PlayerScripts", 10)
         if ps then
-            require(ps:WaitForChild("PlayerModule", 10)):GetControls()
+            controls = require(ps:WaitForChild("PlayerModule", 10)):GetControls()
         end
     end)
 end)
 
+-- PC keyboard fallback
+local held = {}
+local KEYS = {
+    [Enum.KeyCode.W] = true, [Enum.KeyCode.S] = true,
+    [Enum.KeyCode.A] = true, [Enum.KeyCode.D] = true,
+    [Enum.KeyCode.Q] = true, [Enum.KeyCode.E] = true,
+}
+
 UserInputService.InputBegan:Connect(function(input, gp)
     if gp then return end
-    if v50[input.KeyCode] then
-        v51[input.KeyCode] = true
-    end
+    if KEYS[input.KeyCode] then held[input.KeyCode] = true end
     if fcRunning and input.UserInputType == Enum.UserInputType.MouseButton2 then
-        isDragging = true
         UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
     end
 end)
 
 UserInputService.InputEnded:Connect(function(input, gp)
-    if v50[input.KeyCode] then
-        v51[input.KeyCode] = nil
-    end
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
-        isDragging = false
-        if fcRunning then
-            UserInputService.MouseBehavior = Enum.MouseBehavior.Default
-        end
+    if KEYS[input.KeyCode] then held[input.KeyCode] = nil end
+    if input.UserInputType == Enum.UserInputType.MouseButton2 and fcRunning then
+        UserInputService.MouseBehavior = Enum.MouseBehavior.Default
     end
 end)
 
-local function updateZoom(delta)
-    v57 = clamp(v57 - delta * 0.1, 20, 100)
-    TweenService:Create(currentCamera, TweenInfo.new(0.15, Enum.EasingStyle.Sine), { FieldOfView = v57 }):Play()
-end
-
+-- Mouse rotation (PC - RMB drag)
 UserInputService.InputChanged:Connect(function(input, gp)
     if not fcRunning then return end
-    if isDragging and input.UserInputType == Enum.UserInputType.MouseMovement then
+    if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
+        and input.UserInputType == Enum.UserInputType.MouseMovement then
         v16 = v16 - input.Delta.X * 0.18
         v17 = clamp(v17 - input.Delta.Y * 0.18, -89, 89)
     end
     if input.UserInputType == Enum.UserInputType.MouseWheel then
-        updateZoom(input.Position.Z * 10)
+        v57 = clamp(v57 - input.Position.Z * 3, 20, 100)
+    end
+end)
+
+-- Touch rotation (mobile - single finger drag)
+local touchId = nil
+UserInputService.TouchStarted:Connect(function(input, gp)
+    if not fcRunning or gp then return end
+    if touchId == nil then touchId = input end
+end)
+
+UserInputService.TouchMoved:Connect(function(input, gp)
+    if not fcRunning or input ~= touchId then return end
+    v16 = v16 - input.Delta.X * 0.18
+    v17 = clamp(v17 - input.Delta.Y * 0.18, -89, 89)
+end)
+
+UserInputService.TouchEnded:Connect(function(input, gp)
+    if input == touchId then touchId = nil end
+end)
+
+-- Touch pinch zoom (mobile)
+local pinchDist = nil
+UserInputService.TouchPinch:Connect(function(positions, dist, velocity, state, gp)
+    if not fcRunning or gp then return end
+    if state == Enum.UserInputState.Begin then
+        pinchDist = dist
+    elseif state == Enum.UserInputState.Change and pinchDist then
+        v57 = clamp(v57 - (dist - pinchDist) * 0.05, 20, 100)
+        pinchDist = dist
+    else
+        pinchDist = nil
     end
 end)
 
 local function getMoveVec()
+    -- PlayerModule GetMoveVector: works for mobile joystick + PC WASD
+    if controls and controls.GetMoveVector then
+        local mv = controls:GetMoveVector()
+        if mv.Magnitude > 0.01 then
+            return Vector3.new(mv.X, 0, mv.Z)
+        end
+    end
+    -- keyboard fallback (Q/E for up/down not in GetMoveVector)
     return Vector3.new(
-        (v51[Enum.KeyCode.D] and 1 or 0) - (v51[Enum.KeyCode.A] and 1 or 0),
-        (v51[Enum.KeyCode.E] and 1 or 0) - (v51[Enum.KeyCode.Q] and 1 or 0),
-        (v51[Enum.KeyCode.S] and 1 or 0) - (v51[Enum.KeyCode.W] and 1 or 0)
+        (held[Enum.KeyCode.D] and 1 or 0) - (held[Enum.KeyCode.A] and 1 or 0),
+        (held[Enum.KeyCode.E] and 1 or 0) - (held[Enum.KeyCode.Q] and 1 or 0),
+        (held[Enum.KeyCode.S] and 1 or 0) - (held[Enum.KeyCode.W] and 1 or 0)
     )
 end
 
 local function update(dt)
-    -- force scriptable every frame so game camera script can't override
     if currentCamera.CameraType ~= Enum.CameraType.Scriptable then
         currentCamera.CameraType = Enum.CameraType.Scriptable
     end
@@ -143,7 +168,7 @@ local function update(dt)
         +  cf.UpVector    * vel.Y
         -  cf.LookVector  * vel.Z) * SPEED * dt
         +  cf.LookVector  * SPEED * v19 * dt
-    currentCamera.CFrame = CFrame.new(pos) * cf
+    currentCamera.CFrame    = CFrame.new(pos) * cf
     currentCamera.FieldOfView = v57
 end
 
@@ -176,7 +201,7 @@ function _G.EnableFreecam()
 
     velSpring:Reset(Vector3.new(0, 0, 0))
     panSpring:Reset(Vector2.new(v17, v16))
-    for k in pairs(v51) do v51[k] = nil end
+    for k in pairs(held) do held[k] = nil end
 
     if localPlayer.Character then
         local hum = localPlayer.Character:FindFirstChildOfClass("Humanoid")
@@ -199,8 +224,9 @@ function _G.DisableFreecam()
     fcRunning = false
 
     if v20 then v20:Disconnect(); v20 = nil end
-    for k in pairs(v51) do v51[k] = nil end
-    isDragging = false
+    for k in pairs(held) do held[k] = nil end
+    touchId   = nil
+    pinchDist = nil
     UserInputService.MouseBehavior = Enum.MouseBehavior.Default
 
     if localPlayer.Character then
