@@ -9,6 +9,13 @@ local TweenService     = game:GetService("TweenService")
 local localPlayer   = Players.LocalPlayer
 local currentCamera = workspace.CurrentCamera
 
+workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
+    if workspace.CurrentCamera then
+        currentCamera = workspace.CurrentCamera
+    end
+end)
+
+-- Spring
 local Spring = {}
 Spring.__index = Spring
 local exp = math.exp
@@ -16,14 +23,12 @@ local exp = math.exp
 function Spring.new(freq, pos)
     return setmetatable({ f = freq, p = pos, v = 0 }, Spring)
 end
-
 function Spring:Update(dt, goal)
     local f = self.f * 2 * math.pi
     self.v = (f * dt * ((goal - self.p) * f - self.v) + self.v) * exp(-f * dt)
     self.p = goal + (self.v * dt - (goal - self.p) * (f * dt + 1)) * exp(-f * dt)
     return self.p
 end
-
 function Spring:Reset(pos)
     self.p = pos
     self.v = 0
@@ -45,6 +50,7 @@ local panSpring = Spring.new(0.7, Vector2.zero)
 local fcRunning  = false
 local v20        = nil
 local isDragging = false
+local hiddenGuis = {}
 
 local v51 = {}
 local v50 = {
@@ -56,12 +62,11 @@ local v50 = {
     [Enum.KeyCode.E] = true,
 }
 
-local getControlsValue = nil
 task.spawn(function()
     pcall(function()
         local ps = localPlayer:WaitForChild("PlayerScripts", 10)
         if ps then
-            getControlsValue = require(ps:WaitForChild("PlayerModule", 10)):GetControls()
+            require(ps:WaitForChild("PlayerModule", 10)):GetControls()
         end
     end)
 end)
@@ -71,7 +76,7 @@ UserInputService.InputBegan:Connect(function(input, gp)
     if v50[input.KeyCode] then
         v51[input.KeyCode] = true
     end
-    if input.UserInputType == Enum.UserInputType.MouseButton2 then
+    if fcRunning and input.UserInputType == Enum.UserInputType.MouseButton2 then
         isDragging = true
         UserInputService.MouseBehavior = Enum.MouseBehavior.LockCurrentPosition
     end
@@ -83,7 +88,9 @@ UserInputService.InputEnded:Connect(function(input, gp)
     end
     if input.UserInputType == Enum.UserInputType.MouseButton2 then
         isDragging = false
-        UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+        if fcRunning then
+            UserInputService.MouseBehavior = Enum.MouseBehavior.Default
+        end
     end
 end)
 
@@ -112,6 +119,11 @@ local function getMoveVec()
 end
 
 local function update(dt)
+    -- force scriptable every frame so game camera script can't override
+    if currentCamera.CameraType ~= Enum.CameraType.Scriptable then
+        currentCamera.CameraType = Enum.CameraType.Scriptable
+    end
+
     local pan = panSpring:Update(dt, Vector2.new(v17, v16))
     local vel = velSpring:Update(dt, getMoveVec())
     local cf  = CFrame.Angles(0, rad(pan.Y), 0) * CFrame.Angles(rad(pan.X), 0, 0)
@@ -121,6 +133,25 @@ local function update(dt)
         -  cf.LookVector  * vel.Z) * SPEED * dt
         +  cf.LookVector  * SPEED * v19 * dt
     currentCamera.CFrame = CFrame.new(pos) * cf
+    currentCamera.FieldOfView = v57
+end
+
+local function hideAllGuis()
+    local pg = localPlayer:FindFirstChild("PlayerGui")
+    if not pg then return end
+    for _, gui in ipairs(pg:GetChildren()) do
+        if gui:IsA("ScreenGui") and gui.Enabled then
+            gui.Enabled = false
+            hiddenGuis[gui] = true
+        end
+    end
+end
+
+local function restoreAllGuis()
+    for gui in pairs(hiddenGuis) do
+        pcall(function() gui.Enabled = true end)
+    end
+    hiddenGuis = {}
 end
 
 function _G.EnableFreecam()
@@ -148,6 +179,7 @@ function _G.EnableFreecam()
     end
 
     currentCamera.CameraType = Enum.CameraType.Scriptable
+    hideAllGuis()
     v20 = RunService.RenderStepped:Connect(update)
 end
 
@@ -172,6 +204,7 @@ function _G.DisableFreecam()
     end
 
     currentCamera.CameraType = Enum.CameraType.Custom
+    restoreAllGuis()
 end
 
 _G.__RealFreecam_Enable  = _G.EnableFreecam
