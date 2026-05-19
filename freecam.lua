@@ -31,7 +31,7 @@ function Spring:Update(dt, goal)
 end
 function Spring:Reset(pos)
     self.p = pos
-    self.v = 0
+    self.v = pos * 0
 end
 
 local SPEED  = 30
