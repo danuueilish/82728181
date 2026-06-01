@@ -163,7 +163,27 @@ local function update(dt)
     currentCamera.FieldOfView = v57
 end
 
+local function findDeltaButton()
+    local ok, hui = pcall(function() return gethui and gethui() end)
+    if not ok or not hui then return nil end
+    for _, g in ipairs(hui:GetChildren()) do
+        if g:IsA("ScreenGui") then
+            for _, d in ipairs(g:GetDescendants()) do
+                if d:IsA("ImageButton") and d.Image == "rbxasset:///logo.png" then
+                    return g
+                end
+            end
+        end
+    end
+    return nil
+end
+
 local function hideAllGuis()
+    local deltaBtn = findDeltaButton()
+    if deltaBtn and deltaBtn.Enabled then
+        deltaBtn.Enabled = false
+        hiddenGuis[deltaBtn] = true
+    end
     local pg = localPlayer:FindFirstChild("PlayerGui")
     if not pg then return end
     for _, gui in ipairs(pg:GetChildren()) do
