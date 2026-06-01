@@ -13,7 +13,6 @@ workspace:GetPropertyChangedSignal("CurrentCamera"):Connect(function()
     if workspace.CurrentCamera then currentCamera = workspace.CurrentCamera end
 end)
 
--- Spring (proven implementation)
 local Spring = {}
 Spring.__index = Spring
 
@@ -43,12 +42,11 @@ function Spring:Reset(pos)
     self.v = pos * 0
 end
 
--- State
-local SPEED      = 30
-local v19        = 0       -- auto-forward
-local v16        = 0       -- yaw
-local v17        = 0       -- pitch
-local v57        = 70      -- fov
+local SPEED      = tonumber(_G.__FreecamSpeed) or 30
+local v19        = tonumber(_G.__FreecamAuto) or 0
+local v16        = 0
+local v17        = 0
+local v57        = 70
 
 local clamp = math.clamp
 local rad   = math.rad
@@ -61,7 +59,6 @@ local fcRunning  = false
 local v20        = nil
 local hiddenGuis = {}
 
--- PlayerModule controls (joystick mobile + WASD PC)
 local controls = nil
 task.spawn(function()
     pcall(function()
@@ -72,7 +69,6 @@ task.spawn(function()
     end)
 end)
 
--- PC keyboard fallback
 local held = {}
 local KEYS = {
     [Enum.KeyCode.W] = true, [Enum.KeyCode.S] = true,
@@ -95,7 +91,6 @@ UserInputService.InputEnded:Connect(function(input, gp)
     end
 end)
 
--- Mouse rotation (PC - RMB drag)
 UserInputService.InputChanged:Connect(function(input, gp)
     if not fcRunning then return end
     if UserInputService:IsMouseButtonPressed(Enum.UserInputType.MouseButton2)
@@ -108,7 +103,6 @@ UserInputService.InputChanged:Connect(function(input, gp)
     end
 end)
 
--- Touch rotation (mobile - single finger drag)
 local touchId = nil
 UserInputService.TouchStarted:Connect(function(input, gp)
     if not fcRunning or gp then return end
@@ -125,7 +119,6 @@ UserInputService.TouchEnded:Connect(function(input, gp)
     if input == touchId then touchId = nil end
 end)
 
--- Touch pinch zoom (mobile)
 local pinchDist = nil
 UserInputService.TouchPinch:Connect(function(positions, dist, velocity, state, gp)
     if not fcRunning or gp then return end
@@ -140,14 +133,12 @@ UserInputService.TouchPinch:Connect(function(positions, dist, velocity, state, g
 end)
 
 local function getMoveVec()
-    -- PlayerModule GetMoveVector: works for mobile joystick + PC WASD
     if controls and controls.GetMoveVector then
         local mv = controls:GetMoveVector()
         if mv.Magnitude > 0.01 then
             return Vector3.new(mv.X, 0, mv.Z)
         end
     end
-    -- keyboard fallback (Q/E for up/down not in GetMoveVector)
     return Vector3.new(
         (held[Enum.KeyCode.D] and 1 or 0) - (held[Enum.KeyCode.A] and 1 or 0),
         (held[Enum.KeyCode.E] and 1 or 0) - (held[Enum.KeyCode.Q] and 1 or 0),
@@ -246,6 +237,20 @@ end
 
 _G.__RealFreecam_Enable  = _G.EnableFreecam
 _G.__RealFreecam_Disable = _G.DisableFreecam
+
+function _G.SetFreecamSpeed(v)
+    v = tonumber(v)
+    if not v then return end
+    SPEED = clamp(v, 2, 256)
+    _G.__FreecamSpeed = SPEED
+end
+
+function _G.SetFreecamAuto(v)
+    v = tonumber(v)
+    if not v then return end
+    v19 = clamp(v, -1, 1)
+    _G.__FreecamAuto = v19
+end
 
 localPlayer.CharacterAdded:Connect(function()
     if fcRunning then _G.DisableFreecam() end
